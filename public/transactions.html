@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Transactions — View, add, edit, and delete your income and expense entries.">
+  <title>Transactions — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Transactions</h1>
+          <p class="subtitle">Manage your income and expenses</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" id="btnExportCSV">
+            📥 Export CSV
+          </button>
+          <button class="btn btn-primary" id="btnAddTransaction">
+            + Add Transaction
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <select class="form-control" id="filterType">
+          <option value="">All Types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <select class="form-control" id="filterCategory">
+          <option value="">All Categories</option>
+        </select>
+        <input type="date" class="form-control" id="filterFrom" title="From date">
+        <input type="date" class="form-control" id="filterTo" title="To date">
+        <button class="btn btn-ghost" id="btnClearFilters" title="Clear filters">✕ Clear</button>
+      </div>
+
+      <!-- Filtered Transaction Analytics Chart -->
+      <div class="chart-card mb-lg hidden" id="txnChartCard" style="margin-bottom:24px">
+        <h3 style="margin-bottom:16px">📊 Filtered Transactions Breakdown</h3>
+        <div class="chart-container" style="height:220px">
+          <canvas id="txnCategoryChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Transactions Table -->
+      <div class="table-container">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Note</th>
+                <th style="text-align:right">Amount</th>
+                <th style="text-align:center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsBody">
+              <tr>
+                <td colspan="6" class="text-center text-muted" style="padding:48px">
+                  Loading transactions...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Transaction Count -->
+      <p class="text-muted mt-md" id="transactionCount" style="font-size:0.8rem"></p>
+    </main>
+  </div>
+
+  <!-- Add/Edit Transaction Modal -->
+  <div class="modal-overlay" id="transactionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Add Transaction</h2>
+        <button class="modal-close" id="modalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="transactionForm" novalidate>
+          <input type="hidden" id="txnId">
+
+          <!-- Type Toggle -->
+          <div class="form-group">
+            <label>Type</label>
+            <div class="type-toggle">
+              <input type="radio" name="txnType" id="typeExpense" value="expense" checked>
+              <label for="typeExpense">💸 Expense</label>
+              <input type="radio" name="txnType" id="typeIncome" value="income">
+              <label for="typeIncome">💰 Income</label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="txnAmount">Amount</label>
+              <input type="number" id="txnAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="txnDate">Date</label>
+              <input type="date" id="txnDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="txnCategory">Category</label>
+            <select id="txnCategory" class="form-control" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="txnNote">Note (optional)</label>
+            <input type="text" id="txnNote" class="form-control" placeholder="e.g. Groceries from BigBasket">
+          </div>
+
+          <div id="txnError" class="form-error" style="display:none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelTxn">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveTxn">Save Transaction</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/transactions.js"></script>
+</body>
+</html>

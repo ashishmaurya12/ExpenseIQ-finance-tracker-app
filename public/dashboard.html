@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Dashboard — View your financial summary, spending charts, and recent transactions at a glance.">
+  <title>Dashboard — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="subtitle" id="greetingText">Your financial overview</p>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="summary-cards" id="summaryCards">
+        <div class="summary-card income">
+          <div class="card-icon">📈</div>
+          <div class="card-label">Total Income</div>
+          <div class="card-value" id="totalIncome">₹0</div>
+        </div>
+        <div class="summary-card expense">
+          <div class="card-icon">📉</div>
+          <div class="card-label">Total Expenses</div>
+          <div class="card-value" id="totalExpense">₹0</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="card-icon">💎</div>
+          <div class="card-label">Balance</div>
+          <div class="card-value" id="totalBalance">₹0</div>
+        </div>
+        <div class="summary-card savings">
+          <div class="card-icon">🎯</div>
+          <div class="card-label">Savings Rate</div>
+          <div class="card-value" id="savingsRate">0%</div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Spending by Category</h3>
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="pieEmpty">
+            <div class="empty-icon">🥧</div>
+            <p>No expense data yet. Add transactions to see your spending breakdown.</p>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Income vs Expenses (Monthly)</h3>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="barEmpty">
+            <div class="empty-icon">📊</div>
+            <p>No monthly data yet. Add transactions over time to see trends.</p>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Daily Spending Trend (Last 30 Days)</h3>
+          <div class="chart-container">
+            <canvas id="dailyTrendChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="dailyEmpty">
+            <div class="empty-icon">📈</div>
+            <p>No daily spending in the last 30 days.</p>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Income Sources Breakdown</h3>
+          <div class="chart-container">
+            <canvas id="incomeBreakdownChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="incomeEmpty">
+            <div class="empty-icon">💵</div>
+            <p>No income transactions logged yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Financial Insights & Health Score Widget -->
+      <div class="health-widget hidden" id="healthWidget">
+        <div class="health-widget-header">
+          <div class="health-widget-title">
+            <span style="font-size:1.4rem">✨</span>
+            <div>
+              <h3>AI Financial Insights & Health Score</h3>
+              <p class="subtitle" style="margin:0;font-size:0.78rem">Automated analysis of spending habits & budget health</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="health-widget-body">
+          <div class="health-score-card">
+            <div class="score-circle" id="scoreCircle" style="border: 4px solid var(--accent-primary)">
+              <span class="score-value" id="healthScoreValue">0</span>
+              <span class="score-max">OUT OF 100</span>
+            </div>
+            <div class="score-rating" id="scoreRating">
+              <span id="scoreBadge">🌟</span>
+              <span id="scoreLevel">Calculating...</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div id="aiInsightsList"></div>
+            <div class="anomaly-alert-box hidden" id="anomalyAlertBox">
+              <div style="font-weight:600;color:var(--color-expense);font-size:0.82rem;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+                <span>⚡</span> Anomaly Alerts Detected (>2.0x Category Avg):
+              </div>
+              <div id="anomalyList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="recent-transactions">
+        <div class="flex-between mb-md">
+          <h3>Recent Transactions</h3>
+          <a href="/transactions.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+        </div>
+        <div class="table-container">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Note</th>
+                  <th style="text-align:right">Amount</th>
+                </tr>
+              </thead>
+              <tbody id="recentTransactions">
+                <tr>
+                  <td colspan="5" class="text-center text-muted" style="padding:32px">
+                    Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

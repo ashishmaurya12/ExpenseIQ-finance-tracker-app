@@ -1,0 +1,104 @@
+const Budget = require('../models/Budget');
+
+/**
+ * GET /api/budgets
+ */
+async function getAll(req, res, next) {
+  try {
+    const budgets = await Budget.getWithSpending(req.user.id);
+    const totalBudget = budgets.reduce((sum, b) => sum + (Number(b.monthlyLimit) || 0), 0);
+    const totalSpent = budgets.reduce((sum, b) => sum + (Number(b.spent) || 0), 0);
+    const totalRemaining = Math.max(0, totalBudget - totalSpent);
+
+    res.json({
+      success: true,
+      count: budgets.length,
+      totalBudget: Math.round(totalBudget * 100) / 100,
+      totalSpent: Math.round(totalSpent * 100) / 100,
+      totalRemaining: Math.round(totalRemaining * 100) / 100,
+      budgets
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/budgets
+ */
+async function create(req, res, next) {
+  try {
+    const { category, monthlyLimit } = req.body;
+
+    const existing = await Budget.findByCategory(req.user.id, category);
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: `A budget for "${category}" already exists. Edit the existing one instead.`
+      });
+    }
+
+    const budget = await Budget.create({
+      userId: req.user.id,
+      category,
+      monthlyLimit
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Budget created successfully.',
+      budget
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/budgets/:id
+ */
+async function update(req, res, next) {
+  try {
+    const budget = await Budget.update(req.params.id, req.user.id, req.body);
+
+    if (!budget) {
+      return res.status(404).json({
+        success: false,
+        message: 'Budget not found.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Budget updated successfully.',
+      budget
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * DELETE /api/budgets/:id
+ */
+async function remove(req, res, next) {
+  try {
+    const deleted = await Budget.remove(req.params.id, req.user.id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: 'Budget not found.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Budget deleted successfully.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getAll, create, update, remove };

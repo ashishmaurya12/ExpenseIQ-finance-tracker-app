@@ -1,0 +1,237 @@
+/**
+ * ExpenseIQ — Centralized API Client
+ * All fetch calls go through apiFetch() which handles JWT and error responses.
+ */
+
+const API_BASE = '/api';
+
+// ─── Token Management ───────────────────────────────────────
+function getToken() {
+  return localStorage.getItem('expenseiq_token');
+}
+
+function setToken(token) {
+  localStorage.setItem('expenseiq_token', token);
+}
+
+function removeToken() {
+  localStorage.removeItem('expenseiq_token');
+  localStorage.removeItem('expenseiq_user');
+}
+
+function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem('expenseiq_user'));
+  } catch {
+    return null;
+  }
+}
+
+function setUser(user) {
+  localStorage.setItem('expenseiq_user', JSON.stringify(user));
+}
+
+function isAuthenticated() {
+  return !!getToken();
+}
+
+// ─── API Fetch Wrapper ──────────────────────────────────────
+async function apiFetch(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`;
+  const token = getToken();
+
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers
+    },
+    ...options
+  };
+
+  try {
+    const response = await fetch(url, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Token expired or invalid → redirect to login
+      if (response.status === 401) {
+        removeToken();
+        if (!window.location.pathname.includes('index.html') && window.location.pathname !== '/') {
+          window.location.href = '/index.html';
+        }
+      }
+      throw new Error(data.message || 'Something went wrong');
+    }
+
+    return data;
+  } catch (err) {
+    if (err instanceof TypeError && err.message === 'Failed to fetch') {
+      throw new Error('Network error. Please check your connection.');
+    }
+    throw err;
+  }
+}
+
+// ─── Auth API ───────────────────────────────────────────────
+async function apiRegister(name, email, password, currency) {
+  const data = await apiFetch('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password, currency })
+  });
+  setToken(data.token);
+  setUser(data.user);
+  return data;
+}
+
+async function apiLogin(email, password) {
+  const data = await apiFetch('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
+  });
+  setToken(data.token);
+  setUser(data.user);
+  return data;
+}
+
+function apiLogout() {
+  removeToken();
+  window.location.href = '/index.html';
+}
+
+async function apiGetMe() {
+  return apiFetch('/auth/me');
+}
+
+// ─── Transactions API ───────────────────────────────────────
+async function apiGetTransactions(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.type) params.set('type', filters.type);
+  if (filters.category) params.set('category', filters.category);
+  if (filters.from) params.set('from', filters.from);
+  if (filters.to) params.set('to', filters.to);
+
+  const query = params.toString();
+  return apiFetch(`/transactions${query ? '?' + query : ''}`);
+}
+
+async function apiCreateTransaction(data) {
+  return apiFetch('/transactions', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiUpdateTransaction(id, data) {
+  return apiFetch(`/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiDeleteTransaction(id) {
+  return apiFetch(`/transactions/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+async function apiGetSummary() {
+  return apiFetch('/transactions/meta/summary');
+}
+
+// ─── Budgets API ────────────────────────────────────────────
+async function apiGetBudgets() {
+  return apiFetch('/budgets');
+}
+
+async function apiCreateBudget(data) {
+  return apiFetch('/budgets', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiUpdateBudget(id, data) {
+  return apiFetch(`/budgets/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiDeleteBudget(id) {
+  return apiFetch(`/budgets/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+// ─── Goals API ──────────────────────────────────────────────
+async function apiGetGoals() {
+  return apiFetch('/goals');
+}
+
+async function apiCreateGoal(data) {
+  return apiFetch('/goals', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiUpdateGoal(id, data) {
+  return apiFetch(`/goals/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiFundGoal(id, amount) {
+  return apiFetch(`/goals/${id}/fund`, {
+    method: 'POST',
+    body: JSON.stringify({ amount })
+  });
+}
+
+async function apiDeleteGoal(id) {
+  return apiFetch(`/goals/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+// ─── Insights API ───────────────────────────────────────────
+async function apiGetInsights() {
+  return apiFetch('/insights');
+}
+
+// ─── CSV Export Utility ─────────────────────────────────────
+function exportToCSV(transactions, filename = 'expenseiq_transactions.csv') {
+  if (!transactions || transactions.length === 0) {
+    return false;
+  }
+
+  const headers = ['Date', 'Type', 'Category', 'Amount', 'Note'];
+  const rows = transactions.map(t => [
+    t.date,
+    t.type,
+    t.category,
+    t.amount,
+    `"${(t.note || '').replace(/"/g, '""')}"`
+  ]);
+
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(r => r.join(','))
+  ].join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  return true;
+}
+

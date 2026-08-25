@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Budgets — Set monthly spending limits per category and track your progress.">
+  <title>Budgets — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Budgets</h1>
+          <p class="subtitle">Set monthly limits and track your spending</p>
+        </div>
+        <button class="btn btn-primary" id="btnAddBudget">
+          + Add Budget
+        </button>
+      </div>
+
+      <!-- Budget Summary -->
+      <div class="summary-cards" id="budgetSummary" style="margin-bottom:32px">
+        <div class="summary-card income">
+          <div class="card-icon">🎯</div>
+          <div class="card-label">Total Budget</div>
+          <div class="card-value" id="totalBudget">₹0</div>
+        </div>
+        <div class="summary-card expense">
+          <div class="card-icon">💸</div>
+          <div class="card-label">Total Spent</div>
+          <div class="card-value" id="totalSpent">₹0</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="card-icon">💎</div>
+          <div class="card-label">Remaining</div>
+          <div class="card-value" id="totalRemaining">₹0</div>
+        </div>
+      </div>
+
+      <!-- Budget Comparison Chart -->
+      <div class="chart-card mb-lg hidden" id="budgetChartCard" style="margin-bottom:32px">
+        <h3 style="margin-bottom:16px">📊 Budget Limit vs Actual Spending</h3>
+        <div class="chart-container" style="height:260px">
+          <canvas id="budgetComparisonChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Budget Cards Grid -->
+      <div class="budget-grid" id="budgetGrid">
+        <div class="text-center text-muted" style="padding:48px;grid-column:1/-1">
+          Loading budgets...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Budget Modal -->
+  <div class="modal-overlay" id="budgetModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="budgetModalTitle">Add Budget</h2>
+        <button class="modal-close" id="budgetModalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="budgetForm" novalidate>
+          <input type="hidden" id="budgetId">
+
+          <div class="form-group">
+            <label for="budgetCategory">Category</label>
+            <select id="budgetCategory" class="form-control" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="budgetLimit">Monthly Limit (₹)</label>
+            <input type="number" id="budgetLimit" class="form-control" placeholder="e.g. 5000" min="1" step="1" required>
+          </div>
+
+          <div id="budgetError" class="form-error" style="display:none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelBudget">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveBudget">Save Budget</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/budgets.js"></script>
+</body>
+</html>

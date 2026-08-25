@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create your ExpenseIQ account. Start tracking income, expenses, and budgets today.">
+  <title>Create Account — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="sidebar-logo">E</div>
+        <h1>ExpenseIQ</h1>
+        <p>Create your free account</p>
+      </div>
+
+      <form id="registerForm" novalidate>
+        <div class="form-group">
+          <label for="regName">Full Name</label>
+          <input type="text" id="regName" class="form-control" placeholder="John Doe" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <input type="email" id="regEmail" class="form-control" placeholder="you@example.com" required autocomplete="email">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="regPassword">Password</label>
+            <input type="password" id="regPassword" class="form-control" placeholder="Min. 6 characters" required autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label for="regConfirm">Confirm Password</label>
+            <input type="password" id="regConfirm" class="form-control" placeholder="Repeat password" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regCurrency">Currency</label>
+          <select id="regCurrency" class="form-control">
+            <option value="INR">INR (₹) — Indian Rupee</option>
+            <option value="USD">USD ($) — US Dollar</option>
+            <option value="EUR">EUR (€) — Euro</option>
+            <option value="GBP">GBP (£) — British Pound</option>
+          </select>
+        </div>
+
+        <div id="registerError" class="form-error" style="margin-bottom:16px;display:none"></div>
+
+        <button type="submit" class="btn btn-primary" id="registerBtn" style="width:100%;padding:14px;">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="/index.html">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
