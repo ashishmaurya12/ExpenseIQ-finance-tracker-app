@@ -38,17 +38,20 @@ function getPreviousMonthString(dateObj = new Date()) {
 }
 
 /**
- * Sanitize untrusted user text (such as transaction notes) for AI context inclusion.
- * Truncates and strips risky characters / prompt injection attempts.
+ * Sanitize untrusted user text (notes, categories, goal names) for AI context inclusion.
+ * Preserves all Unicode languages (Hindi, Spanish, Japanese, etc.) while stripping
+ * control characters, dangerous HTML markup, and excessive whitespace.
  */
-function sanitizeText(text, maxLen = 40) {
+function sanitizeText(text, maxLen = 60) {
   if (!text || typeof text !== 'string') return '';
+
   let sanitized = text
-    .replace(/[\r\n\t]+/g, ' ')
-    .replace(/[^a-zA-Z0-9\s.,\-$₹€£]/g, '')
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/[\r\n\t\x00-\x1F\x7F]+/g, ' ') // Remove control characters & newlines
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
     .trim();
 
-  // Neutralize common prompt injection directives
+  // Neutralize common prompt injection directives (defense-in-depth)
   const injectionPatterns = [
     /ignore\s+previous\s+(instructions|directives)/gi,
     /reveal\s+(system\s+prompt|secrets|api\s*keys?|credentials)/gi,
@@ -65,11 +68,10 @@ function sanitizeText(text, maxLen = 40) {
   return sanitized.slice(0, maxLen);
 }
 
-
 /**
  * Build structured, size-capped financial context for LLM prompt injection.
  * Strict user isolation: ALWAYS scoped to userId.
- * Never loads complete transaction history into memory.
+ * Guarantees 100% valid JSON payload without post-serialization truncation.
  */
 async function buildFinancialContext(userId) {
   if (!userId) {
@@ -84,7 +86,7 @@ async function buildFinancialContext(userId) {
   const currentMonthStr = getMonthString();
   const previousMonthStr = getPreviousMonthString();
 
-  // 2. Fetch Summaries via Aggregation
+  // 2. Fetch Summaries & Data
   const [currentSummary, previousSummary, userBudgets, userGoals, insightsData] = await Promise.all([
     Transaction.getSummary(userId, currentMonthStr),
     Transaction.getSummary(userId, previousMonthStr),
@@ -99,11 +101,11 @@ async function buildFinancialContext(userId) {
   const cSavings = cIncome - cExpenses;
   const cSavingsRate = cIncome > 0 ? ((cSavings / cIncome) * 100).toFixed(1) : '0.0';
 
-  // Category spending breakdown (current month)
+  // Category spending breakdown (current month, limited to top 8)
   const categoryBreakdown = {};
   if (currentSummary && Array.isArray(currentSummary.byCategory)) {
-    currentSummary.byCategory.forEach(c => {
-      categoryBreakdown[c.category] = c.total;
+    currentSummary.byCategory.slice(0, 8).forEach(c => {
+      categoryBreakdown[sanitizeText(c.category, 30)] = c.total;
     });
   }
 
@@ -129,26 +131,27 @@ async function buildFinancialContext(userId) {
       limit: 5
     });
     const txnsList = Array.isArray(recentTxnsResult) ? recentTxnsResult : (recentTxnsResult.transactions || []);
-    topRecentExpenses = txnsList.map(t => ({
-      category: t.category,
+    topRecentExpenses = txnsList.slice(0, 5).map(t => ({
+      category: sanitizeText(t.category, 30),
       amount: t.amount,
       date: t.date ? String(t.date).slice(0, 10) : '',
-      note: sanitizeText(t.note)
+      note: sanitizeText(t.note, 50)
     }));
   } catch (e) {
     topRecentExpenses = [];
   }
 
-  // Active Budgets Summary (Current Month)
+  // Active Budgets Summary (Current Month, max 10)
   const activeBudgets = (userBudgets || [])
     .filter(b => !b.month || b.month === currentMonthStr)
+    .slice(0, 10)
     .map(b => {
       const spent = b.spent || 0;
       const limit = b.amount || 0;
       const remaining = limit - spent;
       const utilPct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
       return {
-        category: b.category,
+        category: sanitizeText(b.category, 30),
         limit,
         spent,
         remaining,
@@ -156,13 +159,13 @@ async function buildFinancialContext(userId) {
       };
     });
 
-  // Goals Summary
-  const goalsSummary = (userGoals || []).map(g => {
+  // Goals Summary (max 5)
+  const goalsSummary = (userGoals || []).slice(0, 5).map(g => {
     const target = g.targetAmount || 0;
     const current = g.currentAmount || 0;
     const pct = target > 0 ? Math.round((current / target) * 100) : 0;
     return {
-      name: sanitizeText(g.name, 30),
+      name: sanitizeText(g.name, 35),
       targetAmount: target,
       currentAmount: current,
       progressPct: `${pct}%`,
@@ -170,7 +173,7 @@ async function buildFinancialContext(userId) {
     };
   });
 
-  // Health & Insights summary
+  // Health & Insights summary (max 3 anomalies, max 3 key insights)
   const healthScore = insightsData ? insightsData.healthScore || 100 : 100;
   const anomalies = insightsData && Array.isArray(insightsData.anomalies) ? insightsData.anomalies.slice(0, 3) : [];
   const topInsights = insightsData && Array.isArray(insightsData.insights) ? insightsData.insights.slice(0, 3) : [];
@@ -201,20 +204,17 @@ async function buildFinancialContext(userId) {
       healthScore,
       anomaliesCount: anomalies.length,
       anomalies: anomalies.map(a => ({
-        category: a.category,
+        category: sanitizeText(a.category, 30),
         amount: a.amount,
         average: a.average,
         ratio: a.ratio
       })),
-      keyInsights: topInsights.map(i => i.title || i.message || i)
+      keyInsights: topInsights.map(i => sanitizeText(i.title || i.message || i, 60))
     }
   };
 
-  // Convert to formatted string and enforce hard character cap (< 3000 chars)
-  let contextString = JSON.stringify(financialContextPayload, null, 2);
-  if (contextString.length > 3000) {
-    contextString = contextString.slice(0, 2990) + '\n...[truncated]';
-  }
+  // Convert to formatted valid JSON string (no post-string slicing)
+  const contextString = JSON.stringify(financialContextPayload, null, 2);
 
   return {
     rawPayload: financialContextPayload,

@@ -176,17 +176,17 @@ async function submitAiMessage(userText) {
     if (response && response.success && response.reply) {
       appendChatMessage('assistant', response.reply);
 
-      // Keep conversation history capped to 10
+      // Only push successful assistant exchanges into session history
       aiConversationHistory.push({ role: 'user', content: userText });
       aiConversationHistory.push({ role: 'assistant', content: response.reply });
       if (aiConversationHistory.length > 10) {
         aiConversationHistory = aiConversationHistory.slice(-10);
       }
     } else {
-      appendChatMessage('assistant', response.message || 'AI assistant is temporarily unavailable.');
+      appendErrorMessage(response.message || 'AI assistant is temporarily unavailable. Your financial data is still available in ExpenseIQ.');
     }
   } catch (err) {
-    appendChatMessage('assistant', err.message || 'AI assistant is temporarily unavailable. Your financial data remains safe in ExpenseIQ.');
+    appendErrorMessage(err.message || 'AI assistant is temporarily unavailable. Your financial data is still available in ExpenseIQ.');
   } finally {
     isAiSending = false;
     sendBtn.disabled = false;
@@ -194,6 +194,31 @@ async function submitAiMessage(userText) {
     inputField.focus();
   }
 }
+
+/**
+ * Append system error message without polluting conversation history
+ */
+function appendErrorMessage(errorMsg) {
+  const container = document.getElementById('aiChatMessages');
+  if (!container) return;
+
+  const errBox = document.createElement('div');
+  errBox.className = 'ai-error-box';
+  errBox.style.cssText = `
+    background: rgba(237, 87, 82, 0.1);
+    border: 1px solid rgba(237, 87, 82, 0.3);
+    color: var(--color-expense);
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    margin: 6px 0;
+    text-align: center;
+  `;
+  errBox.textContent = `⚠️ ${errorMsg}`;
+  container.appendChild(errBox);
+  container.scrollTop = container.scrollHeight;
+}
+
 
 /**
  * Safely append chat bubble without unsafe innerHTML

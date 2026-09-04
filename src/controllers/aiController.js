@@ -39,17 +39,18 @@ async function chat(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      reply: result.reply,
-      provider: result.provider || 'openai'
+      reply: result.reply
     });
   } catch (err) {
-    if (err.statusCode === 503) {
-      return res.status(503).json({
-        success: false,
-        message: err.message
-      });
-    }
-    next(err);
+    const statusCode = err.statusCode || 503;
+    const clientMessage = statusCode === 503 
+      ? (err.message || 'AI assistant is temporarily unavailable.')
+      : 'An unexpected error occurred while processing your AI request.';
+
+    return res.status(statusCode).json({
+      success: false,
+      message: clientMessage
+    });
   }
 }
 
@@ -74,13 +75,15 @@ async function getPersonalizedInsights(req, res, next) {
       insights: insights || []
     });
   } catch (err) {
-    if (err.statusCode === 503) {
-      return res.status(503).json({
-        success: false,
-        message: err.message
-      });
-    }
-    next(err);
+    const statusCode = err.statusCode || 503;
+    const clientMessage = statusCode === 503 
+      ? (err.message || 'AI insights are temporarily unavailable.')
+      : 'An unexpected error occurred while generating AI insights.';
+
+    return res.status(statusCode).json({
+      success: false,
+      message: clientMessage
+    });
   }
 }
 

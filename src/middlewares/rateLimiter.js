@@ -35,14 +35,16 @@ const apiRateLimiter = rateLimit({
  */
 const aiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // Limit each IP to 30 AI requests per 15 minutes
+  max: 30, // Limit to 30 AI requests per 15 minutes
+  keyGenerator: (req) => (req.user && req.user.id ? `user_${req.user.id}` : req.ip),
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
-    message: 'Too many AI requests from this IP. Please wait a few minutes before trying again.'
+    message: 'Too many AI requests from this user account. Please wait a few minutes before trying again.'
   }
 });
+
 
 module.exports = {
   authRateLimiter,
