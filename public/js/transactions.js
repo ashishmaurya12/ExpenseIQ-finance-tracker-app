@@ -239,6 +239,11 @@ function renderTxnChart(transactions) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 1000,
+        easing: 'easeOutQuart',
+        delay: (context) => (context.type === 'data' && context.mode === 'default' && !context.dropped) ? context.dataIndex * 90 : 0
+      },
       scales: {
         x: { grid: { display: false }, ticks: { color: '#64748B', font: { family: 'Plus Jakarta Sans', weight: '600' } } },
         y: {

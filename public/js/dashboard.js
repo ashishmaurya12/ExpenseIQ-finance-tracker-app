@@ -162,6 +162,12 @@ function renderCategoryChart(breakdown) {
       responsive: true,
       maintainAspectRatio: true,
       cutout: '65%',
+      animation: {
+        animateScale: true,
+        animateRotate: true,
+        duration: 1200,
+        easing: 'easeOutQuart'
+      },
       plugins: {
         legend: {
           position: 'bottom',
@@ -245,6 +251,11 @@ function renderMonthlyChart(monthlyData) {
       responsive: true,
       maintainAspectRatio: true,
       interaction: { intersect: false, mode: 'index' },
+      animation: {
+        duration: 1000,
+        easing: 'easeOutQuart',
+        delay: (context) => (context.type === 'data' && context.mode === 'default' && !context.dropped) ? context.dataIndex * 100 : 0
+      },
       scales: {
         x: {
           grid: { display: false },
@@ -348,6 +359,11 @@ function renderDailyTrendChart(dailyData) {
       responsive: true,
       maintainAspectRatio: true,
       interaction: { intersect: false, mode: 'index' },
+      animation: {
+        duration: 1200,
+        easing: 'easeOutQuart',
+        delay: (context) => (context.type === 'data' && context.mode === 'default' && !context.dropped) ? context.dataIndex * 35 : 0
+      },
       scales: {
         x: {
           grid: { display: false },
@@ -432,6 +448,12 @@ function renderIncomeBreakdownChart(breakdown) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
+      animation: {
+        animateScale: true,
+        animateRotate: true,
+        duration: 1200,
+        easing: 'easeOutQuart'
+      },
       plugins: {
         legend: {
           position: 'bottom',
