@@ -51,11 +51,15 @@ function request(method, path, body = null, token = null) {
   });
 }
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('Recurring Transactions Suite (Phase 4A)', async (t) => {
   const timestamp = Date.now();
   let userAToken, userAId, userBToken, userBId;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('recurring');
     await connectDB();
 
     await new Promise((resolve) => {
@@ -99,10 +103,12 @@ test('Recurring Transactions Suite (Phase 4A)', async (t) => {
         await Transaction.TransactionModel.deleteMany({ userId: { $in: [userAId, userBId] } });
       } catch {}
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('1. Date Calculation Logic & Month-End Safety', async () => {

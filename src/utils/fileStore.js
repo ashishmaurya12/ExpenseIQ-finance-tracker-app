@@ -1,16 +1,21 @@
 const fs = require('fs');
 const path = require('path');
-const { DATA_DIR } = require('../config/config');
+const config = require('../config/config');
+
+function getDataDir() {
+  return process.env.DATA_DIR || config.DATA_DIR;
+}
 
 /**
  * Ensure the data directory and file exist.
  * Creates an empty JSON array file if missing.
  */
 function ensureFile(filename) {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  const dataDir = getDataDir();
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
-  const filePath = path.join(DATA_DIR, filename);
+  const filePath = path.join(dataDir, filename);
   if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, '[]', 'utf8');
   }

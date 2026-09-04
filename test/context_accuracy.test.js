@@ -10,11 +10,15 @@ const Goal = require('../src/models/Goal');
 const { connectDB } = require('../src/config/db');
 const { buildFinancialContext } = require('../src/utils/financialContext');
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('Financial Calculations & Bounded Context Accuracy Suite', async (t) => {
   const timestamp = Date.now();
   let testUser;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('context_accuracy');
     await connectDB();
 
     testUser = await User.create({
@@ -34,10 +38,12 @@ test('Financial Calculations & Bounded Context Accuracy Suite', async (t) => {
         await Goal.GoalModel.deleteMany({ userId: testUser.id });
       } catch {}
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('1. Financial Calculations & Correct Model Field Mappings', async () => {

@@ -48,11 +48,15 @@ function request(method, path, body = null, token = null) {
   });
 }
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('Deterministic AI Endpoints & Fallback Contract Suite', async (t) => {
   const timestamp = Date.now();
   let userToken, userId;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('ai_deterministic');
     await connectDB();
 
     await new Promise((resolve) => {
@@ -81,10 +85,12 @@ test('Deterministic AI Endpoints & Fallback Contract Suite', async (t) => {
       await new Promise(res => server.close(res));
       server = null;
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('TEST A — AI Success returns HTTP 200 & reply', async () => {

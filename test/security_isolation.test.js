@@ -53,11 +53,15 @@ function request(method, path, body = null, token = null) {
   });
 }
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('Security & User Isolation Test Suite', async (t) => {
   const timestamp = Date.now();
   let userAToken, userAId, userBToken, userBId;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('security_isolation');
     await connectDB();
 
     await new Promise((resolve) => {
@@ -110,7 +114,7 @@ test('Security & User Isolation Test Suite', async (t) => {
       await new Promise(res => server.close(res));
       server = null;
     }
-    if (userAId && userBId) {
+    if (userAId && userBId && mongoose.connection.readyState === 1) {
       try {
         await User.UserModel.deleteMany({ id: { $in: [userAId, userBId] } });
         await Transaction.TransactionModel.deleteMany({ userId: { $in: [userAId, userBId] } });
@@ -118,10 +122,12 @@ test('Security & User Isolation Test Suite', async (t) => {
         await Goal.GoalModel.deleteMany({ userId: { $in: [userAId, userBId] } });
       } catch {}
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('1. Deterministic Financial Context Isolation (User A vs User B)', async () => {

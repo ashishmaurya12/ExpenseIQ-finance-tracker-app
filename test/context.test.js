@@ -10,11 +10,15 @@ const Transaction = require('../src/models/Transaction');
 const { connectDB } = require('../src/config/db');
 const { buildFinancialContext, sanitizeText } = require('../src/utils/financialContext');
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('Financial Context Correctness Suite', async (t) => {
   const timestamp = Date.now();
   let testUser;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('context');
     await connectDB();
 
     testUser = await User.create({
@@ -34,10 +38,12 @@ test('Financial Context Correctness Suite', async (t) => {
         await Transaction.TransactionModel.deleteMany({ userId: testUser.id });
       } catch {}
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('A. Budget Fields: monthlyLimit and spent correctly populates in context', async () => {

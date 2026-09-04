@@ -16,7 +16,9 @@ module.exports = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
 
   // Data storage directory
-  DATA_DIR: path.join(__dirname, '..', '..', 'data'),
+  get DATA_DIR() {
+    return process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
+  },
 
   // Default categories
   CATEGORIES: [

@@ -50,11 +50,15 @@ function request(method, path, body = null, token = null) {
   });
 }
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('Bill Reminders Suite (Phase 4A)', async (t) => {
   const timestamp = Date.now();
   let userAToken, userAId, userBToken, userBId;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('reminders');
     await connectDB();
 
     await new Promise((resolve) => {
@@ -97,10 +101,12 @@ test('Bill Reminders Suite (Phase 4A)', async (t) => {
         await Reminder.ReminderModel.deleteMany({ userId: { $in: [userAId, userBId] } });
       } catch {}
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('1. Reminder CRUD Operations & Validation', async () => {

@@ -47,11 +47,15 @@ function request(method, path, body = null, token = null) {
   });
 }
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('Core Application Regression & Health Contract Suite', async (t) => {
   const timestamp = Date.now();
   let userToken, userId;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('regression');
     await connectDB();
 
     await new Promise((resolve) => {
@@ -77,10 +81,12 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
       await new Promise(res => server.close(res));
       server = null;
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('1. Health Endpoint Healthy Contract (GET /api/health → 200 OK)', async () => {

@@ -48,11 +48,15 @@ function request(method, path, body = null, token = null) {
   });
 }
 
+const { setupTestIsolation } = require('./helpers/testSetup');
+
 test('AI Endpoints & Security Hardening Suite', async (t) => {
   const timestamp = Date.now();
   let userAToken, userAId, userBToken, userBId;
+  let isolation;
 
   t.before(async () => {
+    isolation = setupTestIsolation('ai_endpoints');
     await connectDB();
 
     await new Promise((resolve) => {
@@ -91,10 +95,12 @@ test('AI Endpoints & Security Hardening Suite', async (t) => {
       await new Promise(res => server.close(res));
       server = null;
     }
-    try {
-      await mongoose.connection.close(true);
-      await mongoose.disconnect();
-    } catch {}
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.close(true);
+      } catch {}
+    }
+    if (isolation) isolation.cleanup();
   });
 
   await t.test('1. Authentication & JWT Validation (401 Unauthorized)', async () => {

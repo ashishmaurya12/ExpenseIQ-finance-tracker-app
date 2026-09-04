@@ -3,5 +3,7 @@ node_modules/
 data/*.json
 *.log
 logs/
+test/scratch_data/
+data_test_scratch/
 .DS_Store
 Thumbs.db
