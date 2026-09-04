@@ -96,23 +96,28 @@ async function buildFinancialContext(userId) {
   ]);
 
   // Current Month Stats
-  const cIncome = currentSummary ? Number(currentSummary.totalIncome) || 0 : 0;
-  const cExpenses = currentSummary ? Number(currentSummary.totalExpenses) || 0 : 0;
+  const cIncome = currentSummary ? (Number(currentSummary.totalIncome) || 0) : 0;
+  const cExpenses = currentSummary ? (Number(currentSummary.totalExpense) || Number(currentSummary.totalExpenses) || 0) : 0;
   const cSavings = cIncome - cExpenses;
   const cSavingsRate = cIncome > 0 ? ((cSavings / cIncome) * 100).toFixed(1) : '0.0';
 
   // Category spending breakdown (current month, limited to top 8)
   const categoryBreakdown = {};
-  if (currentSummary && Array.isArray(currentSummary.byCategory)) {
+  if (currentSummary && currentSummary.categoryBreakdown && typeof currentSummary.categoryBreakdown === 'object') {
+    Object.keys(currentSummary.categoryBreakdown).slice(0, 8).forEach(cat => {
+      categoryBreakdown[sanitizeText(cat, 30)] = Number(currentSummary.categoryBreakdown[cat]) || 0;
+    });
+  } else if (currentSummary && Array.isArray(currentSummary.byCategory)) {
     currentSummary.byCategory.slice(0, 8).forEach(c => {
       categoryBreakdown[sanitizeText(c.category, 30)] = Number(c.total) || 0;
     });
   }
 
   // Previous Month Stats
-  const pIncome = previousSummary ? Number(previousSummary.totalIncome) || 0 : 0;
-  const pExpenses = previousSummary ? Number(previousSummary.totalExpenses) || 0 : 0;
+  const pIncome = previousSummary ? (Number(previousSummary.totalIncome) || 0) : 0;
+  const pExpenses = previousSummary ? (Number(previousSummary.totalExpense) || Number(previousSummary.totalExpenses) || 0) : 0;
   const pSavings = pIncome - pExpenses;
+
 
   // Month-over-Month % change in expenses
   let momExpenseChange = '0%';

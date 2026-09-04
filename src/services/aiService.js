@@ -1,10 +1,25 @@
 const OpenAI = require('openai');
-const { AI_ENABLED, OPENAI_API_KEY, OPENAI_MODEL } = require('../config/config');
+const config = require('../config/config');
 const { buildFinancialContext } = require('../utils/financialContext');
 
-let openaiClient = null;
-if (OPENAI_API_KEY) {
-  openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
+let customOpenaiClient = null;
+
+function getClient() {
+  if (customOpenaiClient) return customOpenaiClient;
+  const apiKey = process.env.OPENAI_API_KEY || config.OPENAI_API_KEY;
+  if (apiKey) {
+    return new OpenAI({ apiKey });
+  }
+  return null;
+}
+
+function isAiEnabled() {
+  if (process.env.AI_ENABLED === 'false') return false;
+  return config.AI_ENABLED !== false;
+}
+
+function setOpenAIClient(client) {
+  customOpenaiClient = client;
 }
 
 /**
@@ -47,13 +62,14 @@ function sanitizeHistory(rawHistory = []) {
  * Throws an Error with statusCode = 503 if provider fails, is disabled, or is unconfigured.
  */
 async function getChatReply(userId, userMessage, rawHistory = []) {
-  if (!AI_ENABLED) {
+  if (!isAiEnabled()) {
     const err = new Error('AI features are currently unavailable.');
     err.statusCode = 503;
     throw err;
   }
 
-  if (!OPENAI_API_KEY || !openaiClient) {
+  const client = getClient();
+  if (!client) {
     const err = new Error('AI assistant is temporarily unavailable.');
     err.statusCode = 503;
     throw err;
@@ -76,8 +92,9 @@ async function getChatReply(userId, userMessage, rawHistory = []) {
   ];
 
   try {
-    const completion = await openaiClient.chat.completions.create({
-      model: OPENAI_MODEL || 'gpt-4o-mini',
+    const modelName = process.env.OPENAI_MODEL || config.OPENAI_MODEL || 'gpt-4o-mini';
+    const completion = await client.chat.completions.create({
+      model: modelName,
       messages,
       max_tokens: 600,
       temperature: 0.4
@@ -99,7 +116,6 @@ async function getChatReply(userId, userMessage, rawHistory = []) {
     };
   } catch (error) {
     if (error.statusCode === 503) throw error;
-    console.error('  ⚠️ OpenAI Chat API Call Failed:', error.message || error);
     
     const err = new Error('AI assistant is temporarily unavailable.');
     err.statusCode = 503;
@@ -112,13 +128,14 @@ async function getChatReply(userId, userMessage, rawHistory = []) {
  * Throws an Error with statusCode = 503 if provider fails, is disabled, or returns malformed response.
  */
 async function generatePersonalizedInsights(userId) {
-  if (!AI_ENABLED) {
+  if (!isAiEnabled()) {
     const err = new Error('AI features are currently unavailable.');
     err.statusCode = 503;
     throw err;
   }
 
-  if (!OPENAI_API_KEY || !openaiClient) {
+  const client = getClient();
+  if (!client) {
     const err = new Error('AI insights are temporarily unavailable.');
     err.statusCode = 503;
     throw err;
@@ -150,8 +167,9 @@ ${contextString}
 `.trim();
 
   try {
-    const completion = await openaiClient.chat.completions.create({
-      model: OPENAI_MODEL || 'gpt-4o-mini',
+    const modelName = process.env.OPENAI_MODEL || config.OPENAI_MODEL || 'gpt-4o-mini';
+    const completion = await client.chat.completions.create({
+      model: modelName,
       messages: [
         { role: 'system', content: SYSTEM_INSTRUCTION },
         { role: 'user', content: prompt }
@@ -173,7 +191,14 @@ ${contextString}
     // Clean markdown ticks
     const jsonText = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
 
-    const parsed = JSON.parse(jsonText);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch (e) {
+      const err = new Error('AI insights are temporarily unavailable.');
+      err.statusCode = 503;
+      throw err;
+    }
     
     // Strict schema validation for insights array
     if (!Array.isArray(parsed) || parsed.length === 0) {
@@ -210,7 +235,6 @@ ${contextString}
     return validInsights;
   } catch (error) {
     if (error.statusCode === 503) throw error;
-    console.error('  ⚠️ AI Insights Generation Error:', error.message || error);
 
     const err = new Error('AI insights are temporarily unavailable.');
     err.statusCode = 503;
@@ -221,5 +245,6 @@ ${contextString}
 module.exports = {
   getChatReply,
   generatePersonalizedInsights,
-  isAIConfigured: () => AI_ENABLED && Boolean(OPENAI_API_KEY)
+  setOpenAIClient,
+  isAIConfigured: () => isAiEnabled() && Boolean(getClient())
 };
