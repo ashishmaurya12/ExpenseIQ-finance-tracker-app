@@ -136,6 +136,7 @@ async function findById(id, userId) {
     delete t.__v;
     return t;
   }
+  assertProductionStorage();
   const transactions = readData(FILE);
   return transactions.find(t => t.id === id && t.userId === userId) || null;
 }
@@ -196,6 +197,7 @@ async function update(id, userId, data) {
     return updated;
   }
 
+  assertProductionStorage();
   const transactions = readData(FILE);
   const index = transactions.findIndex(t => t.id === id && t.userId === userId);
   if (index === -1) return null;
@@ -224,6 +226,7 @@ async function remove(id, userId) {
     return result.deletedCount > 0;
   }
 
+  assertProductionStorage();
   const transactions = readData(FILE);
   const index = transactions.findIndex(t => t.id === id && t.userId === userId);
   if (index === -1) return false;

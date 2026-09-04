@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const mongoose = require('mongoose');
 const { PORT, FRONTEND_URL } = require('./src/config/config');
 const { connectDB } = require('./src/config/db');
 const { migrateJsonToMongo } = require('./src/utils/migrateJsonToMongo');
@@ -43,16 +44,33 @@ app.use('/api/auth/register', authRateLimiter);
 // --------------- Static Files ---------------
 app.use(express.static(path.join(__dirname, 'public')));
 
-const mongoose = require('mongoose');
+// --------------- Production Database Guard Middleware ---------------
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health') return next();
+  if (process.env.NODE_ENV === 'production' && mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database service unavailable. API operations suspended in production mode.'
+    });
+  }
+  next();
+});
 
 // --------------- Health Endpoint ---------------
 app.get('/api/health', (req, res) => {
   const isConnected = mongoose.connection.readyState === 1;
-  res.status(isConnected ? 200 : 503).json({
-    success: true,
-    status: isConnected ? 'ok' : 'degraded',
-    database: isConnected ? 'connected' : 'disconnected',
-    storage: isConnected ? 'mongodb' : 'json_filestore'
+  if (isConnected) {
+    return res.status(200).json({
+      success: true,
+      status: 'ok',
+      database: 'connected',
+      storage: 'mongodb'
+    });
+  }
+  return res.status(503).json({
+    success: false,
+    status: 'degraded',
+    database: 'disconnected'
   });
 });
 

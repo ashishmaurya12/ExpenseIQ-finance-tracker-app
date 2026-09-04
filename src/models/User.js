@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { readData, writeData } = require('../utils/fileStore');
-const { generateId } = require('../utils/helpers');
+const { generateId, assertProductionStorage } = require('../utils/helpers');
 const { DEFAULT_CURRENCY } = require('../config/config');
 
 const FILE = 'users.json';
@@ -30,6 +30,7 @@ async function findByEmail(email) {
     const user = await UserModel.findOne({ email: email.toLowerCase().trim() }).lean();
     return user || null;
   }
+  assertProductionStorage();
   const users = readData(FILE);
   return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
 }
@@ -42,6 +43,7 @@ async function findById(id) {
     const user = await UserModel.findOne({ id }).lean();
     return user || null;
   }
+  assertProductionStorage();
   const users = readData(FILE);
   return users.find(u => u.id === id) || null;
 }
@@ -71,6 +73,7 @@ async function create({ name, email, password, currency }) {
     return userObj;
   }
 
+  assertProductionStorage();
   const users = readData(FILE);
   const newUser = {
     id: userId,
@@ -107,6 +110,7 @@ async function updatePassword(id, newPassword) {
     return true;
   }
 
+  assertProductionStorage();
   const users = readData(FILE);
   const user = users.find(u => u.id === id);
   if (!user) return false;
@@ -136,6 +140,7 @@ async function updateProfile(id, updates) {
     return updated;
   }
 
+  assertProductionStorage();
   const users = readData(FILE);
   const user = users.find(u => u.id === id);
   if (!user) return null;

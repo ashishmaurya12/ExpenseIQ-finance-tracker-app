@@ -43,8 +43,12 @@ async function generateInsights(userId) {
             { $match: { type: 'expense', date: { $regex: `^${prevMonth}` } } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
           ],
-          allExpensesByCategory: [
+          categoryAverages: [
             { $match: { type: 'expense' } },
+            { $group: { _id: '$category', avgAmount: { $avg: '$amount' }, count: { $sum: 1 } } }
+          ],
+          currentMonthExpenses: [
+            { $match: { type: 'expense', date: { $regex: `^${currentMonth}` }, amount: { $gte: 500 } } },
             { $project: { id: 1, date: 1, category: 1, amount: 1, note: 1 } }
           ]
         }
@@ -68,19 +72,37 @@ async function generateInsights(userId) {
       prevExpense = facetResult.prevMonthTotals[0].total || 0;
     }
 
-    if (facetResult && facetResult.allExpensesByCategory) {
-      facetResult.allExpensesByCategory.forEach(t => {
-        const cat = (t.category || 'Other').trim();
-        if (!categoryTxnAmounts[cat]) categoryTxnAmounts[cat] = [];
-        categoryTxnAmounts[cat].push({
-          id: t.id,
-          date: t.date,
-          category: cat,
-          amount: Number(t.amount) || 0,
-          note: t.note || ''
-        });
+    const mongoAnomalies = [];
+    const catStatsMap = {};
+    if (facetResult && facetResult.categoryAverages) {
+      facetResult.categoryAverages.forEach(item => {
+        if (item._id) {
+          catStatsMap[item._id.trim()] = { avgAmount: item.avgAmount, count: item.count };
+        }
       });
     }
+
+    if (facetResult && facetResult.currentMonthExpenses) {
+      facetResult.currentMonthExpenses.forEach(t => {
+        const cat = (t.category || 'Other').trim();
+        const stats = catStatsMap[cat];
+        if (stats && stats.count >= 2) {
+          const avg = stats.avgAmount;
+          if (t.amount >= 500 && t.amount >= avg * 2.0) {
+            mongoAnomalies.push({
+              id: t.id,
+              date: t.date,
+              category: cat,
+              amount: t.amount,
+              average: Math.round(avg),
+              ratio: (t.amount / avg).toFixed(1),
+              note: t.note || 'Unusually large transaction'
+            });
+          }
+        }
+      });
+    }
+    mongoAnomaliesComputed = mongoAnomalies;
   } else {
     const transactions = await Transaction.findByUserId(userId);
 
@@ -287,29 +309,32 @@ async function generateInsights(userId) {
   }
 
   // 5. Anomaly Detection (> 2.0x category average and current month)
-  const anomalies = [];
-  Object.entries(categoryTxnAmounts).forEach(([cat, list]) => {
-    if (list.length >= 2) {
-      const totalAmount = list.reduce((sum, item) => sum + item.amount, 0);
-      const avg = totalAmount / list.length;
+  let anomalies = [];
+  if (isMongo && typeof mongoAnomaliesComputed !== 'undefined' && mongoAnomaliesComputed) {
+    anomalies = mongoAnomaliesComputed;
+  } else {
+    Object.entries(categoryTxnAmounts).forEach(([cat, list]) => {
+      if (list.length >= 2) {
+        const totalAmount = list.reduce((sum, item) => sum + item.amount, 0);
+        const avg = totalAmount / list.length;
 
-      list.forEach(t => {
-        const tMonth = getMonthFromDate(t.date);
-        // Only flag current month transactions with significant magnitude (>= 500 & > 2.0x avg)
-        if (tMonth === currentMonth && t.amount >= 500 && t.amount >= avg * 2.0) {
-          anomalies.push({
-            id: t.id,
-            date: t.date,
-            category: cat,
-            amount: t.amount,
-            average: Math.round(avg),
-            ratio: (t.amount / avg).toFixed(1),
-            note: t.note || 'Unusually large transaction'
-          });
-        }
-      });
-    }
-  });
+        list.forEach(t => {
+          const tMonth = getMonthFromDate(t.date);
+          if (tMonth === currentMonth && t.amount >= 500 && t.amount >= avg * 2.0) {
+            anomalies.push({
+              id: t.id,
+              date: t.date,
+              category: cat,
+              amount: t.amount,
+              average: Math.round(avg),
+              ratio: (t.amount / avg).toFixed(1),
+              note: t.note || 'Unusually large transaction'
+            });
+          }
+        });
+      }
+    });
+  }
 
   return {
     healthScore,

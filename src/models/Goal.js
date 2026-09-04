@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { readData, writeData } = require('../utils/fileStore');
-const { generateId } = require('../utils/helpers');
+const { generateId, assertProductionStorage } = require('../utils/helpers');
 
 const FILE = 'goals.json';
 
@@ -35,6 +35,7 @@ async function findByUserId(userId) {
       return g;
     });
   }
+  assertProductionStorage();
   return readData(FILE).filter(g => g.userId === userId);
 }
 
@@ -49,6 +50,7 @@ async function findById(id, userId) {
     delete g.__v;
     return g;
   }
+  assertProductionStorage();
   const goals = readData(FILE);
   return goals.find(g => g.id === id && g.userId === userId) || null;
 }
@@ -76,6 +78,7 @@ async function create({ userId, name, targetAmount, savedAmount, deadline, icon 
     return obj;
   }
 
+  assertProductionStorage();
   const goals = readData(FILE);
   goals.push(newGoal);
   writeData(FILE, goals);
@@ -108,6 +111,7 @@ async function update(id, userId, data) {
     return updated;
   }
 
+  assertProductionStorage();
   const goals = readData(FILE);
   const index = goals.findIndex(g => g.id === id && g.userId === userId);
   if (index === -1) return null;
@@ -147,6 +151,7 @@ async function addFunds(id, userId, amount) {
     return updated;
   }
 
+  assertProductionStorage();
   const goals = readData(FILE);
   const index = goals.findIndex(g => g.id === id && g.userId === userId);
   if (index === -1) return null;
@@ -167,6 +172,7 @@ async function remove(id, userId) {
     return result.deletedCount > 0;
   }
 
+  assertProductionStorage();
   const goals = readData(FILE);
   const index = goals.findIndex(g => g.id === id && g.userId === userId);
   if (index === -1) return false;

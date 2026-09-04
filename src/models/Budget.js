@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { readData, writeData } = require('../utils/fileStore');
-const { generateId } = require('../utils/helpers');
+const { generateId, assertProductionStorage } = require('../utils/helpers');
 const Transaction = require('./Transaction');
 
 const FILE = 'budgets.json';
@@ -42,6 +42,7 @@ async function findByUserId(userId, targetMonth = null) {
     });
   }
 
+  assertProductionStorage();
   let budgets = readData(FILE).filter(b => b.userId === userId);
   if (targetMonth && targetMonth !== 'all') {
     budgets = budgets.filter(b => !b.month || b.month === targetMonth);
@@ -60,6 +61,7 @@ async function findById(id, userId) {
     delete b.__v;
     return b;
   }
+  assertProductionStorage();
   const budgets = readData(FILE);
   return budgets.find(b => b.id === id && b.userId === userId) || null;
 }
@@ -76,6 +78,7 @@ async function findByCategory(userId, category, month = null) {
     delete b.__v;
     return b;
   }
+  assertProductionStorage();
   const budgets = readData(FILE);
   return budgets.find(b => b.userId === userId && b.category === category && (b.month || null) === monthVal) || null;
 }
@@ -102,6 +105,7 @@ async function create({ userId, category, monthlyLimit, month = null }) {
     return obj;
   }
 
+  assertProductionStorage();
   const budgets = readData(FILE);
   budgets.push(newBudget);
   writeData(FILE, budgets);
@@ -132,6 +136,7 @@ async function update(id, userId, data) {
     return updated;
   }
 
+  assertProductionStorage();
   const budgets = readData(FILE);
   const index = budgets.findIndex(b => b.id === id && b.userId === userId);
   if (index === -1) return null;
@@ -158,6 +163,7 @@ async function remove(id, userId) {
     return result.deletedCount > 0;
   }
 
+  assertProductionStorage();
   const budgets = readData(FILE);
   const index = budgets.findIndex(b => b.id === id && b.userId === userId);
   if (index === -1) return false;
