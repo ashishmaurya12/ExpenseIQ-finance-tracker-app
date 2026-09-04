@@ -26,6 +26,36 @@ ExpenseIQ is a full-stack personal finance application built with Node.js, Expre
 
 ---
 
+## Phase 4B Features — Advanced Financial Intelligence & Automation
+
+### 1. Financial Health Score 2.0
+- Transparent 0–100 overall score evaluated across 6 weighted sub-components:
+  * Savings Rate Score (weight 25%)
+  * Budget Adherence Score (weight 20%)
+  * Goal Progress Score (weight 15%)
+  * Debt Ratio Score (weight 15%)
+  * Expense Stability Score (weight 15%)
+  * Emergency Fund Ratio Score (weight 10%)
+- Grade assignments (`A`, `B`, `C`, `D`, `F`) with identified strengths, weaknesses, and personalized recommendations.
+
+### 2. Cash-Flow Forecasting & Risk Evaluation
+- Deterministic 1–12 month cash-flow model based on weighted moving averages and variance bounds (upper/lower confidence intervals).
+- Risk evaluation system identifying cash-flow deficits, income volatility, accelerating expense growth, and short emergency fund runways.
+
+### 3. Expense Anomaly Detection
+- Automated statistical outlier detection (Z-Score > 2.0 or category spike > 1.5x expected average).
+- Trigger scan integration with Notification Center for real-time anomaly alerts.
+
+### 4. Advanced Analytics & Comparative Trends
+- Multi-period comparison (% change in income, expenses, net balance, and savings rate).
+- Category breakdown, trend history, and stacked monthly performance visualizations.
+
+### 5. AI-Powered Monthly Financial Report
+- 10-section structured AI executive summary: Executive Summary, Income Analysis, Expense Breakdown, Budget vs Actual, Goal Tracking, Savings & Cash Flow, Cash-Flow Risk, Anomaly Summary, Health Score Breakdown, and Actionable AI Recommendations.
+
+
+---
+
 ## API Endpoints (Phase 4A)
 
 ### Recurring Transactions (`/api/recurring`)
@@ -49,6 +79,28 @@ ExpenseIQ is a full-stack personal finance application built with Node.js, Expre
 - `PUT /api/notifications/:id/read` — Mark notification as read.
 - `POST /api/notifications/read-all` — Mark all user notifications as read.
 - `DELETE /api/notifications/:id` — Delete notification.
+
+### Advanced Analytics (`/api/analytics`)
+- `GET /api/analytics/overview` — Get financial metrics overview for period.
+- `GET /api/analytics/trends` — Get spending/income trends.
+- `GET /api/analytics/categories` — Get expense category breakdown.
+- `GET /api/analytics/monthly` — Get historical monthly performance.
+- `GET /api/analytics/comparison` — Compare two monthly periods.
+
+### Cash-Flow Forecasting (`/api/cash-flow`)
+- `GET /api/cash-flow/forecast` — Deterministic 1–12 month cash-flow forecast with confidence bounds.
+- `GET /api/cash-flow/risk` — Risk evaluation for cash-flow deficits, volatility, and runway.
+
+### Expense Anomalies (`/api/anomalies`)
+- `GET /api/anomalies` — List statistical transaction outliers.
+- `POST /api/anomalies/analyze` — Trigger anomaly scan and notification alerts.
+
+### Financial Health (`/api/financial-health`)
+- `GET /api/financial-health` — Get Health Score 2.0 (0–100, 6 components, grade, strengths, weaknesses).
+- `GET /api/financial-health/recommendations` — Get personalized health recommendations.
+
+### AI Monthly Reports (`/api/financial-reports`)
+- `GET /api/financial-reports/monthly` — Generate 10-section AI executive monthly report.
 
 ---
 

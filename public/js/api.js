@@ -329,6 +329,67 @@ async function apiDeleteNotification(id) {
   });
 }
 
+// ─── Phase 4B: Analytics & Intelligence APIs ─────────────────
+async function apiGetAnalyticsOverview(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/analytics/overview${query ? `?${query}` : ''}`);
+}
+
+async function apiGetAnalyticsTrends(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/analytics/trends${query ? `?${query}` : ''}`);
+}
+
+async function apiGetAnalyticsCategories(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/analytics/categories${query ? `?${query}` : ''}`);
+}
+
+async function apiGetAnalyticsMonthly(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/analytics/monthly${query ? `?${query}` : ''}`);
+}
+
+async function apiGetAnalyticsComparison(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/analytics/comparison${query ? `?${query}` : ''}`);
+}
+
+async function apiGetCashFlowForecast(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/cash-flow/forecast${query ? `?${query}` : ''}`);
+}
+
+async function apiGetCashFlowRisk(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/cash-flow/risk${query ? `?${query}` : ''}`);
+}
+
+async function apiGetAnomalies(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/anomalies${query ? `?${query}` : ''}`);
+}
+
+async function apiAnalyzeAnomalies() {
+  return apiFetch('/anomalies/analyze', {
+    method: 'POST'
+  });
+}
+
+async function apiGetFinancialHealth() {
+  return apiFetch('/financial-health');
+}
+
+async function apiGetRecommendations() {
+  return apiFetch('/financial-health/recommendations');
+}
+
+async function apiGenerateMonthlyReport(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/financial-reports/monthly${query ? `?${query}` : ''}`);
+}
+
+
 
 // ─── CSV Export Utility ─────────────────────────────────────
 function exportToCSV(transactions, filename = 'expenseiq_transactions.csv') {

@@ -6,6 +6,7 @@
 function initSidebar(activePage) {
   const navItems = [
     { id: 'dashboard',     label: 'Dashboard',     icon: '📊', href: '/dashboard.html' },
+    { id: 'analytics',     label: 'Analytics',     icon: '📈', href: '/analytics.html' },
     { id: 'transactions',  label: 'Transactions',  icon: '💳', href: '/transactions.html' },
     { id: 'budgets',       label: 'Budgets',       icon: '🎯', href: '/budgets.html' },
     { id: 'goals',         label: 'Savings Goals',  icon: '🏆', href: '/goals.html' },

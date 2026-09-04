@@ -84,6 +84,11 @@ app.use('/api/ai', require('./src/routes/ai'));
 app.use('/api/recurring', require('./src/routes/recurring'));
 app.use('/api/reminders', require('./src/routes/reminders'));
 app.use('/api/notifications', require('./src/routes/notifications'));
+app.use('/api/analytics', require('./src/routes/analytics'));
+app.use('/api/cash-flow', require('./src/routes/cashFlow'));
+app.use('/api/anomalies', require('./src/routes/anomalies'));
+app.use('/api/financial-health', require('./src/routes/financialHealth'));
+app.use('/api/financial-reports', require('./src/routes/financialReports'));
 
 
 // --------------- API 404 Catch-All ---------------
