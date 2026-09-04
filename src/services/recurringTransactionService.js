@@ -97,18 +97,30 @@ async function processDueRecurringTransactions(userId = null) {
       continue; // Skip if already claimed by concurrent execution
     }
 
-    // Create the actual financial transaction
-    const newTxn = await Transaction.create({
-      userId: item.userId,
-      type: item.type,
-      amount: item.amount,
-      category: item.category,
-      date: currentDueDate,
-      note: item.description ? `[Auto-recurring] ${item.description}` : `[Auto-recurring] ${item.category}`
-    });
+    try {
+      const note = item.description ? `[Auto-recurring] ${item.description}` : `[Auto-recurring] ${item.category}`;
 
-    createdTransactions.push(newTxn);
-    processedCount++;
+      // Create the actual financial transaction
+      const newTxn = await Transaction.create({
+        userId: item.userId,
+        type: item.type,
+        amount: item.amount,
+        category: item.category,
+        date: currentDueDate,
+        note
+      });
+
+      createdTransactions.push(newTxn);
+      processedCount++;
+    } catch (err) {
+      console.error(`Error creating transaction for recurring item ${item.id}:`, err.message);
+      // Recovery: Revert claimed schedule state so occurrence remains recoverable on retry
+      await RecurringTransaction.update(item.id, item.userId, {
+        lastProcessedDate: item.lastProcessedDate || null,
+        nextDueDate: currentDueDate,
+        active: true
+      });
+    }
   }
 
   return {

@@ -2,11 +2,17 @@ const Notification = require('../models/Notification');
 const Reminder = require('../models/Reminder');
 const Budget = require('../models/Budget');
 const Goal = require('../models/Goal');
+const User = require('../models/User');
 
 /**
  * Generate deduplicated notifications for due/overdue reminders based on reminderDaysBefore.
  */
 async function generateReminderNotifications(userId) {
+  const user = await User.findById(userId);
+  if (user && user.reminderAlertsEnabled === false) {
+    return 0; // Skip generating reminder notifications if user disabled them in preferences
+  }
+
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayDate = new Date(todayStr);
 
@@ -46,7 +52,11 @@ async function generateReminderNotifications(userId) {
       const targetDate = new Date(r.dueDate);
       const diffMs = targetDate.getTime() - todayDate.getTime();
       const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-      const reminderDaysBefore = Math.max(0, Math.min(30, parseInt(r.reminderDaysBefore, 10) ?? 3));
+
+      const parsedDays = parseInt(r.reminderDaysBefore, 10);
+      const reminderDaysBefore = Number.isFinite(parsedDays)
+        ? Math.max(0, Math.min(30, parsedDays))
+        : 3;
 
       if (diffDays <= reminderDaysBefore && diffDays > 0) {
         const isTomorrow = diffDays === 1;
