@@ -255,4 +255,37 @@ test('Notification Center Suite (Phase 4A)', async (t) => {
     assert.equal(bgtNotifs.length, uniqueTypes.size);
     assert.ok(bgtNotifs.some(n => n.message.includes('90%')));
   });
+
+  await t.test('5. Concurrent Deduplication & Frontend Files Verification', async () => {
+    if (!userAId) return;
+
+    const fs = require('fs');
+    const path = require('path');
+
+    // 1. Concurrent duplicate creation race test
+    const dedupKey = `concurrent_test_${Date.now()}`;
+    const [c1, c2, c3] = await Promise.all([
+      Notification.create({ userId: userAId, type: 'system', title: 'Concurrent Test', message: 'Race test', dedupKey }),
+      Notification.create({ userId: userAId, type: 'system', title: 'Concurrent Test', message: 'Race test', dedupKey }),
+      Notification.create({ userId: userAId, type: 'system', title: 'Concurrent Test', message: 'Race test', dedupKey })
+    ]);
+
+    const createdCount = [c1, c2, c3].filter(Boolean).length;
+    assert.equal(createdCount, 1, 'Concurrent notification creation with same dedupKey produces exactly 1 record');
+
+    // 2. Verify Phase 4A Frontend HTML and JS files exist
+    const publicDir = path.join(__dirname, '..', 'public');
+    const requiredFiles = [
+      'recurring.html', 'js/recurring.js',
+      'reminders.html', 'js/reminders.js',
+      'notifications.html', 'js/notifications.js'
+    ];
+
+    for (const file of requiredFiles) {
+      const filePath = path.join(publicDir, file);
+      assert.ok(fs.existsSync(filePath), `Required frontend file ${file} must exist`);
+      const content = fs.readFileSync(filePath, 'utf8');
+      assert.ok(content.length > 50, `${file} must contain code content`);
+    }
+  });
 });

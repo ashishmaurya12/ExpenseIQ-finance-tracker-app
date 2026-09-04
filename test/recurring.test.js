@@ -225,4 +225,46 @@ test('Recurring Transactions Suite (Phase 4A)', async (t) => {
     const processResult2 = await processDueRecurringTransactions(userAId);
     assert.equal(processResult2.processedCount, 0, 'Idempotent run creates 0 duplicate transactions');
   });
+
+  await t.test('5. Scheduler Lifecycle & Concurrent Processing Safety', async () => {
+    const { startScheduler, stopScheduler } = require('../src/services/recurringScheduler');
+
+    // 1. Scheduler disabled by default
+    delete process.env.RECURRING_SCHEDULER_ENABLED;
+    startScheduler(); // should do nothing when disabled
+    stopScheduler();
+
+    // 2. Scheduler startup & duplicate start safety
+    process.env.RECURRING_SCHEDULER_ENABLED = 'true';
+    process.env.RECURRING_SCHEDULER_INTERVAL = '60000';
+    startScheduler();
+    startScheduler(); // Duplicate call should be safe / noop
+    stopScheduler();
+    process.env.RECURRING_SCHEDULER_ENABLED = 'false';
+
+    // 3. Concurrent processing safety
+    if (userAToken && userAId) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      await request('POST', '/recurring', {
+        type: 'expense',
+        amount: 8888,
+        category: 'Housing',
+        description: 'Concurrent Rent Check',
+        frequency: 'monthly',
+        startDate: todayStr,
+        nextDueDate: todayStr,
+        autoCreate: true
+      }, userAToken);
+
+      // Run 3 simultaneous process calls concurrently
+      const [res1, res2, res3] = await Promise.all([
+        processDueRecurringTransactions(userAId),
+        processDueRecurringTransactions(userAId),
+        processDueRecurringTransactions(userAId)
+      ]);
+
+      const totalProcessed = res1.processedCount + res2.processedCount + res3.processedCount;
+      assert.equal(totalProcessed, 1, 'Concurrent execution produces exactly 1 transaction occurrence');
+    }
+  });
 });

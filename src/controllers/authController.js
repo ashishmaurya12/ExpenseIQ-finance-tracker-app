@@ -137,9 +137,14 @@ async function changePassword(req, res, next) {
  */
 async function updateProfile(req, res, next) {
   try {
-    const { name, currency } = req.body;
+    const { name, currency, notificationsEnabled, reminderAlertsEnabled } = req.body;
 
-    const updatedUser = await User.updateProfile(req.user.id, { name, currency });
+    const updatedUser = await User.updateProfile(req.user.id, {
+      name,
+      currency,
+      notificationsEnabled,
+      reminderAlertsEnabled
+    });
     if (!updatedUser) {
       return res.status(404).json({
         success: false,

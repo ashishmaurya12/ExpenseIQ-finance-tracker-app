@@ -241,6 +241,53 @@ async function remove(id, userId) {
   return false;
 }
 
+/**
+ * Atomically claim and advance a due occurrence to prevent concurrent processing races.
+ */
+async function claimDueOccurrence(id, userId, currentDueDate, calculatedNextDueDate, shouldDeactivate) {
+  if (isMongoConnected()) {
+    const updated = await RecurringTransactionModel.findOneAndUpdate(
+      {
+        id,
+        userId,
+        active: true,
+        lastProcessedDate: { $ne: currentDueDate }
+      },
+      {
+        $set: {
+          lastProcessedDate: currentDueDate,
+          nextDueDate: calculatedNextDueDate,
+          active: !shouldDeactivate,
+          updatedAt: new Date()
+        }
+      },
+      { new: true }
+    ).lean();
+
+    if (!updated) return null;
+    delete updated._id;
+    delete updated.__v;
+    return updated;
+  }
+
+  assertProductionStorage();
+  const all = readData(FILE);
+  const index = all.findIndex(item =>
+    item.id === id &&
+    item.userId === userId &&
+    item.active &&
+    item.lastProcessedDate !== currentDueDate
+  );
+  if (index === -1) return null;
+
+  all[index].lastProcessedDate = currentDueDate;
+  all[index].nextDueDate = calculatedNextDueDate;
+  all[index].active = !shouldDeactivate;
+  all[index].updatedAt = new Date().toISOString();
+  writeData(FILE, all);
+  return all[index];
+}
+
 module.exports = {
   RecurringTransactionModel,
   findByUserId,
@@ -248,5 +295,6 @@ module.exports = {
   findById,
   create,
   update,
+  claimDueOccurrence,
   delete: remove
 };

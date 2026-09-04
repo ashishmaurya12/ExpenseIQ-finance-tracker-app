@@ -187,4 +187,76 @@ test('Bill Reminders Suite (Phase 4A)', async (t) => {
     const bDelete = await request('DELETE', `/reminders/${remIdA}`, null, userBToken);
     assert.equal(bDelete.status, 404);
   });
+
+  await t.test('4. reminderDaysBefore Logic & Notification Filtering', async () => {
+    if (!userAId) return;
+
+    const notificationService = require('../src/services/notificationService');
+    const Notification = require('../src/models/Notification');
+
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    const d1 = new Date(today);
+    d1.setDate(d1.getDate() + 1);
+    const in1DayStr = d1.toISOString().slice(0, 10);
+
+    const d7 = new Date(today);
+    d7.setDate(d7.getDate() + 7);
+    const in7DaysStr = d7.toISOString().slice(0, 10);
+
+    // 1. Reminder with 7 days before (due in 7 days)
+    const r7 = await Reminder.create({
+      userId: userAId,
+      title: '7 Day Reminder',
+      amount: 1000,
+      dueDate: in7DaysStr,
+      reminderDaysBefore: 7,
+      status: 'pending'
+    });
+
+    // 2. Reminder with 0 days before (due in 7 days -> should NOT notify today)
+    const r0 = await Reminder.create({
+      userId: userAId,
+      title: '0 Day Reminder',
+      amount: 500,
+      dueDate: in7DaysStr,
+      reminderDaysBefore: 0,
+      status: 'pending'
+    });
+
+    // 3. Completed reminder (due in 1 day -> should NOT notify)
+    const rComp = await Reminder.create({
+      userId: userAId,
+      title: 'Completed Bill',
+      amount: 300,
+      dueDate: in1DayStr,
+      reminderDaysBefore: 3,
+      status: 'completed'
+    });
+
+    // 4. Dismissed reminder (due today -> should NOT notify)
+    const rDism = await Reminder.create({
+      userId: userAId,
+      title: 'Dismissed Bill',
+      amount: 400,
+      dueDate: todayStr,
+      reminderDaysBefore: 3,
+      status: 'dismissed'
+    });
+
+    await notificationService.generateReminderNotifications(userAId);
+
+    const n7 = await Notification.find({ userId: userAId, relatedEntityId: r7.id });
+    assert.equal(n7.length, 1, 'Reminder due in 7 days with reminderDaysBefore=7 generated notification');
+
+    const n0 = await Notification.find({ userId: userAId, relatedEntityId: r0.id });
+    assert.equal(n0.length, 0, 'Reminder due in 7 days with reminderDaysBefore=0 did NOT generate notification today');
+
+    const nComp = await Notification.find({ userId: userAId, relatedEntityId: rComp.id });
+    assert.equal(nComp.length, 0, 'Completed reminder did NOT generate notification');
+
+    const nDism = await Notification.find({ userId: userAId, relatedEntityId: rDism.id });
+    assert.equal(nDism.length, 0, 'Dismissed reminder did NOT generate notification');
+  });
 });

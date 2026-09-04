@@ -86,6 +86,7 @@ async function loadDashboard(selectedMonth = null) {
       renderAIHealthWidget(insightsData);
     }
     updateGreeting();
+    loadDashboardPhase4AWidgets();
 
   } catch (err) {
     showToast(err.message, 'error');
@@ -719,5 +720,90 @@ function updateGreeting() {
   const el = document.getElementById('greetingText');
   if (el && user) {
     el.textContent = `${greeting}, ${user.name.split(' ')[0]}! Here's your financial overview.`;
+  }
+}
+
+// ─── Phase 4A Intelligence Widgets ─────────────────────────
+async function loadDashboardPhase4AWidgets() {
+  const billsContainer = document.getElementById('dashUpcomingBillsList');
+  const notifsContainer = document.getElementById('dashRecentNotificationsList');
+  const recurringContainer = document.getElementById('dashRecurringList');
+
+  // 1. Upcoming Dues
+  if (billsContainer && typeof apiGetReminders === 'function') {
+    try {
+      const res = await apiGetReminders({ limit: 4 });
+      const items = (res.reminders || []).slice(0, 4);
+      if (items.length === 0) {
+        billsContainer.innerHTML = '<div class="text-muted" style="font-size:0.85rem;padding:8px 0">No upcoming bill dues.</div>';
+      } else {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        billsContainer.innerHTML = items.map(r => {
+          const isOverdue = r.status === 'overdue' || (r.status === 'pending' && r.dueDate < todayStr);
+          const color = isOverdue ? '#ef4444' : r.dueDate === todayStr ? '#f59e0b' : 'inherit';
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;padding:6px 0;border-bottom:1px solid var(--border-color)">
+              <div style="min-width:0;flex:1;margin-right:8px">
+                <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(r.title)}</div>
+                <div style="font-size:0.75rem;color:${color}">Due: ${escapeHTML(r.dueDate)}</div>
+              </div>
+              <div style="font-weight:700;flex-shrink:0">₹${Number(r.amount).toLocaleString('en-IN')}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch {
+      billsContainer.innerHTML = '<div class="text-muted" style="font-size:0.85rem;padding:8px 0">Unable to load dues.</div>';
+    }
+  }
+
+  // 2. Recent Notifications
+  if (notifsContainer && typeof apiGetNotifications === 'function') {
+    try {
+      const res = await apiGetNotifications({ limit: 4 });
+      const items = (res.notifications || []).slice(0, 4);
+      if (items.length === 0) {
+        notifsContainer.innerHTML = '<div class="text-muted" style="font-size:0.85rem;padding:8px 0">No recent notifications.</div>';
+      } else {
+        notifsContainer.innerHTML = items.map(n => {
+          return `
+            <div style="display:flex;gap:8px;align-items:flex-start;font-size:0.85rem;padding:6px 0;border-bottom:1px solid var(--border-color)">
+              <span style="font-size:0.85rem;line-height:1;margin-top:2px">${!n.read ? '🔵' : '⚪'}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(n.title)}</div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(n.message)}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch {
+      notifsContainer.innerHTML = '<div class="text-muted" style="font-size:0.85rem;padding:8px 0">Unable to load notifications.</div>';
+    }
+  }
+
+  // 3. Recurring Payments
+  if (recurringContainer && typeof apiGetRecurringTransactions === 'function') {
+    try {
+      const res = await apiGetRecurringTransactions({ limit: 4 });
+      const items = (res.recurring || []).filter(i => i.active).slice(0, 4);
+      if (items.length === 0) {
+        recurringContainer.innerHTML = '<div class="text-muted" style="font-size:0.85rem;padding:8px 0">No active recurring schedules.</div>';
+      } else {
+        recurringContainer.innerHTML = items.map(rec => {
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;padding:6px 0;border-bottom:1px solid var(--border-color)">
+              <div style="min-width:0;flex:1;margin-right:8px">
+                <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(rec.description || rec.category)}</div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);text-transform:capitalize">${escapeHTML(rec.frequency)} • Next: ${escapeHTML(rec.nextDueDate)}</div>
+              </div>
+              <div style="font-weight:700;color:${rec.type === 'income' ? '#10b981' : 'inherit'};flex-shrink:0">₹${Number(rec.amount).toLocaleString('en-IN')}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch {
+      recurringContainer.innerHTML = '<div class="text-muted" style="font-size:0.85rem;padding:8px 0">Unable to load recurring schedules.</div>';
+    }
   }
 }

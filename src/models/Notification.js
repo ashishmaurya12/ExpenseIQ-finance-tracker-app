@@ -25,9 +25,19 @@ const notificationSchema = new mongoose.Schema({
 
 notificationSchema.index({ userId: 1, createdAt: -1 });
 notificationSchema.index({ userId: 1, read: 1 });
-notificationSchema.index({ userId: 1, dedupKey: 1 });
+notificationSchema.index(
+  { userId: 1, dedupKey: 1 },
+  {
+    name: 'userId_dedupKey_unique',
+    unique: true,
+    partialFilterExpression: { dedupKey: { $type: 'string' } }
+  }
+);
 
 const NotificationModel = mongoose.models.Notification || mongoose.model('Notification', notificationSchema);
+if (mongoose.connection.readyState === 1) {
+  NotificationModel.ensureIndexes().catch(() => {});
+}
 
 function isMongoConnected() {
   return mongoose.connection.readyState === 1;
@@ -164,15 +174,26 @@ async function create(data) {
   };
 
   if (isMongoConnected()) {
-    const doc = await NotificationModel.create(item);
-    const obj = doc.toObject();
-    delete obj._id;
-    delete obj.__v;
-    return obj;
+    try {
+      const doc = await NotificationModel.create(item);
+      const obj = doc.toObject();
+      delete obj._id;
+      delete obj.__v;
+      return obj;
+    } catch (err) {
+      if (err.code === 11000 || (err.message && (err.message.includes('E11000') || err.message.includes('duplicate key')))) {
+        return null; // Suppress duplicate key error silently
+      }
+      throw err;
+    }
   }
 
   assertProductionStorage();
   const all = readData(FILE);
+  if (dedupKey && all.some(existing => existing.userId === userId && existing.dedupKey === dedupKey)) {
+    return null; // Suppress duplicate notification in JSON storage
+  }
+
   all.push(item);
   writeData(FILE, all);
   return item;

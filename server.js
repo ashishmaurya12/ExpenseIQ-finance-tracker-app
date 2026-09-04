@@ -102,7 +102,8 @@ app.get('*', (req, res) => {
 // --------------- Error Handler ---------------
 app.use(errorHandler);
 
-// --------------- Start Server & Graceful Shutdown ---------------
+const { startScheduler, stopScheduler } = require('./src/services/recurringScheduler');
+
 let server;
 
 async function startServer() {
@@ -115,12 +116,20 @@ async function startServer() {
   }
 
   server = app.listen(PORT, () => {
-    console.log(`  🚀 ExpenseIQ server running at http://localhost:${PORT}\n`);
+    console.log(`  🚀 ExpenseIQ server running at http://localhost:${PORT}`);
+    const schedulerEnabled = process.env.RECURRING_SCHEDULER_ENABLED === 'true';
+    if (schedulerEnabled) {
+      startScheduler();
+      console.log('  ⏰ Recurring scheduler: enabled\n');
+    } else {
+      console.log('  ⏰ Recurring scheduler: disabled\n');
+    }
   });
 }
 
 function handleShutdown(signal) {
   console.log(`\n  🛑 ${signal} received. Initiating graceful shutdown...`);
+  stopScheduler();
   if (server) {
     server.close(async () => {
       console.log('  🔒 HTTP server closed.');
@@ -134,6 +143,9 @@ function handleShutdown(signal) {
     process.exit(0);
   }
 }
+
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 
 if (require.main === module) {
   startServer();

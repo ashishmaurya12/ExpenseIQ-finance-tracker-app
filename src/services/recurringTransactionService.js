@@ -80,9 +80,21 @@ async function processDueRecurringTransactions(userId = null) {
       continue;
     }
 
-    // Idempotency Check: Don't process if already processed today or for this nextDueDate
-    if (item.lastProcessedDate === item.nextDueDate) {
-      continue;
+    const currentDueDate = item.nextDueDate;
+    const calculatedNextDueDate = calculateNextDueDate(currentDueDate, item.frequency);
+    const shouldDeactivate = Boolean(item.endDate && calculatedNextDueDate > item.endDate);
+
+    // Atomically claim occurrence to prevent duplicate creation during concurrent execution
+    const claimed = await RecurringTransaction.claimDueOccurrence(
+      item.id,
+      item.userId,
+      currentDueDate,
+      calculatedNextDueDate,
+      shouldDeactivate
+    );
+
+    if (!claimed) {
+      continue; // Skip if already claimed by concurrent execution
     }
 
     // Create the actual financial transaction
@@ -91,24 +103,12 @@ async function processDueRecurringTransactions(userId = null) {
       type: item.type,
       amount: item.amount,
       category: item.category,
-      date: item.nextDueDate,
+      date: currentDueDate,
       note: item.description ? `[Auto-recurring] ${item.description}` : `[Auto-recurring] ${item.category}`
     });
 
     createdTransactions.push(newTxn);
     processedCount++;
-
-    // Calculate next due date
-    const nextDueDate = calculateNextDueDate(item.nextDueDate, item.frequency);
-
-    // Check if end date reached
-    const shouldDeactivate = item.endDate && nextDueDate > item.endDate;
-
-    await RecurringTransaction.update(item.id, item.userId, {
-      lastProcessedDate: item.nextDueDate,
-      nextDueDate,
-      active: !shouldDeactivate
-    });
   }
 
   return {

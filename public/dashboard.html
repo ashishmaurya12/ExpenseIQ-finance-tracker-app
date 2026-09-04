@@ -138,6 +138,42 @@
         </div>
       </div>
 
+      <!-- Phase 4A Compact Dashboard Intelligence Widgets -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:20px;margin-bottom:32px">
+        <!-- Upcoming Bills Widget -->
+        <div class="card" style="padding:20px">
+          <div class="flex-between mb-sm">
+            <h3 style="font-size:1rem;margin:0">⏰ Upcoming Dues</h3>
+            <a href="/reminders.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+          </div>
+          <div id="dashUpcomingBillsList" style="display:flex;flex-direction:column;gap:10px">
+            <div class="text-muted" style="font-size:0.85rem">Loading upcoming dues...</div>
+          </div>
+        </div>
+
+        <!-- Recent Notifications Widget -->
+        <div class="card" style="padding:20px">
+          <div class="flex-between mb-sm">
+            <h3 style="font-size:1rem;margin:0">🔔 Notifications</h3>
+            <a href="/notifications.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+          </div>
+          <div id="dashRecentNotificationsList" style="display:flex;flex-direction:column;gap:10px">
+            <div class="text-muted" style="font-size:0.85rem">Loading notifications...</div>
+          </div>
+        </div>
+
+        <!-- Recurring Payments Widget -->
+        <div class="card" style="padding:20px">
+          <div class="flex-between mb-sm">
+            <h3 style="font-size:1rem;margin:0">🔄 Recurring Schedules</h3>
+            <a href="/recurring.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+          </div>
+          <div id="dashRecurringList" style="display:flex;flex-direction:column;gap:10px">
+            <div class="text-muted" style="font-size:0.85rem">Loading recurring payments...</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Recent Transactions -->
       <div class="recent-transactions">
         <div class="flex-between mb-md">

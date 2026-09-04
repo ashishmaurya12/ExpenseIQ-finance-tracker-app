@@ -5,10 +5,13 @@
 
 function initSidebar(activePage) {
   const navItems = [
-    { id: 'dashboard',    label: 'Dashboard',    icon: '📊', href: '/dashboard.html' },
-    { id: 'transactions', label: 'Transactions', icon: '💳', href: '/transactions.html' },
-    { id: 'budgets',      label: 'Budgets',      icon: '🎯', href: '/budgets.html' },
-    { id: 'goals',        label: 'Savings Goals', icon: '🏆', href: '/goals.html' },
+    { id: 'dashboard',     label: 'Dashboard',     icon: '📊', href: '/dashboard.html' },
+    { id: 'transactions',  label: 'Transactions',  icon: '💳', href: '/transactions.html' },
+    { id: 'budgets',       label: 'Budgets',       icon: '🎯', href: '/budgets.html' },
+    { id: 'goals',         label: 'Savings Goals',  icon: '🏆', href: '/goals.html' },
+    { id: 'recurring',     label: 'Recurring',     icon: '🔄', href: '/recurring.html' },
+    { id: 'reminders',     label: 'Reminders',     icon: '⏰', href: '/reminders.html' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔', href: '/notifications.html' }
   ];
 
   const user = getUser();
@@ -21,6 +24,10 @@ function initSidebar(activePage) {
       <div class="sidebar-header">
         <div class="sidebar-logo">E</div>
         <span class="sidebar-brand">ExpenseIQ</span>
+        <a href="/notifications.html" class="nav-bell-link" id="navBellLink" title="Notification Center">
+          <span class="bell-icon">🔔</span>
+          <span class="unread-badge" id="navUnreadBadge" style="display: none;">0</span>
+        </a>
       </div>
 
       <nav class="sidebar-nav">
@@ -28,6 +35,7 @@ function initSidebar(activePage) {
           <a href="${item.href}" class="nav-item ${item.id === activePage ? 'active' : ''}" id="nav-${item.id}">
             <span class="nav-icon">${item.icon}</span>
             <span>${item.label}</span>
+            ${item.id === 'notifications' ? '<span class="nav-badge" id="sidebarNotifBadge" style="display:none;">0</span>' : ''}
           </a>
         `).join('')}
       </nav>
@@ -146,6 +154,34 @@ function initSidebar(activePage) {
       }
     }
   });
+
+  // Start periodic notification badge updater (every 30s)
+  updateNotificationBadge();
+  setInterval(updateNotificationBadge, 30000);
+}
+
+async function updateNotificationBadge() {
+  const badge = document.getElementById('navUnreadBadge');
+  const sidebarBadge = document.getElementById('sidebarNotifBadge');
+  if (!badge && !sidebarBadge) return;
+
+  try {
+    if (typeof apiGetNotifications !== 'function') return;
+    const res = await apiGetNotifications({ limit: 1 });
+    const count = res && typeof res.unreadCount === 'number' ? res.unreadCount : 0;
+    const displayStr = count > 99 ? '99+' : String(count);
+
+    if (badge) {
+      badge.textContent = displayStr;
+      badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+    if (sidebarBadge) {
+      sidebarBadge.textContent = displayStr;
+      sidebarBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+  } catch {
+    // Fail silently in badge UI
+  }
 }
 
 function triggerQuickAdd() {

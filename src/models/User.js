@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   currency: { type: String, default: DEFAULT_CURRENCY },
+  notificationsEnabled: { type: Boolean, default: true },
+  reminderAlertsEnabled: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -63,6 +65,8 @@ async function create({ name, email, password, currency }) {
       email: email.toLowerCase().trim(),
       password: hashedPassword,
       currency: currency || DEFAULT_CURRENCY,
+      notificationsEnabled: true,
+      reminderAlertsEnabled: true,
       createdAt: new Date()
     });
 
@@ -81,6 +85,8 @@ async function create({ name, email, password, currency }) {
     email: email.toLowerCase().trim(),
     password: hashedPassword,
     currency: currency || DEFAULT_CURRENCY,
+    notificationsEnabled: true,
+    reminderAlertsEnabled: true,
     createdAt: new Date().toISOString()
   };
 
@@ -120,12 +126,18 @@ async function updatePassword(id, newPassword) {
 }
 
 /**
- * Update user profile details (name, currency).
+ * Update user profile details (name, currency, preferences).
  */
 async function updateProfile(id, updates) {
   const fieldsToUpdate = {};
   if (updates.name) fieldsToUpdate.name = updates.name.trim();
   if (updates.currency) fieldsToUpdate.currency = updates.currency.trim();
+  if (typeof updates.notificationsEnabled === 'boolean') {
+    fieldsToUpdate.notificationsEnabled = updates.notificationsEnabled;
+  }
+  if (typeof updates.reminderAlertsEnabled === 'boolean') {
+    fieldsToUpdate.reminderAlertsEnabled = updates.reminderAlertsEnabled;
+  }
 
   if (isMongoConnected()) {
     const updated = await UserModel.findOneAndUpdate(
@@ -146,6 +158,12 @@ async function updateProfile(id, updates) {
   if (!user) return null;
   if (updates.name) user.name = updates.name.trim();
   if (updates.currency) user.currency = updates.currency.trim();
+  if (typeof updates.notificationsEnabled === 'boolean') {
+    user.notificationsEnabled = updates.notificationsEnabled;
+  }
+  if (typeof updates.reminderAlertsEnabled === 'boolean') {
+    user.reminderAlertsEnabled = updates.reminderAlertsEnabled;
+  }
   writeData(FILE, users);
 
   const { password: _, ...userWithoutPassword } = user;

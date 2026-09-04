@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Recurring Transactions — Manage automated subscriptions, rent, and regular income.">
+  <title>Recurring Transactions — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Recurring Transactions</h1>
+          <p class="subtitle">Automate regular income, bills, and subscriptions</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-secondary" id="btnProcessDue" title="Process Due Recurring Transactions">
+            ⚡ Process Due Now
+          </button>
+          <button class="btn btn-primary" id="btnAddRecurring">
+            + Add Recurring
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Banner -->
+      <div class="summary-cards" style="margin-bottom:32px">
+        <div class="summary-card income">
+          <div class="card-icon">🔄</div>
+          <div class="card-label">Active Schedules</div>
+          <div class="card-value" id="activeCount">0</div>
+        </div>
+        <div class="summary-card expense">
+          <div class="card-icon">⚡</div>
+          <div class="card-label">Auto-Create Enabled</div>
+          <div class="card-value" id="autoCreateCount">0</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="card-icon">📅</div>
+          <div class="card-label">Next Due</div>
+          <div class="card-value" id="nextDueEarliest" style="font-size:1.1rem">—</div>
+        </div>
+      </div>
+
+      <!-- Recurring Items List Container -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="table-responsive">
+          <table class="table" id="recurringTable">
+            <thead>
+              <tr>
+                <th>Description / Category</th>
+                <th>Type</th>
+                <th>Frequency</th>
+                <th>Amount</th>
+                <th>Next Due Date</th>
+                <th>Status</th>
+                <th>Auto-Create</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recurringList">
+              <tr>
+                <td colspan="8" class="text-center text-muted" style="padding:32px">
+                  Loading recurring transactions...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Recurring Modal -->
+  <div class="modal-overlay" id="recurringModal">
+    <div class="modal" style="max-width:550px">
+      <div class="modal-header">
+        <h2 id="recurringModalTitle">Add Recurring Transaction</h2>
+        <button class="modal-close" id="recurringModalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="recurringForm" novalidate>
+          <input type="hidden" id="recurringId">
+
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group">
+              <label for="recType">Type</label>
+              <select id="recType" class="form-control" required>
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="recAmount">Amount (₹)</label>
+              <input type="number" id="recAmount" class="form-control" placeholder="e.g. 15000" min="0.01" step="0.01" required>
+            </div>
+          </div>
+
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group">
+              <label for="recCategory">Category</label>
+              <select id="recCategory" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label for="recFrequency">Frequency</label>
+              <select id="recFrequency" class="form-control" required>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly" selected>Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="recDescription">Description / Title</label>
+            <input type="text" id="recDescription" class="form-control" placeholder="e.g. Apartment Rent, Salary, Netflix" maxlength="200" required>
+          </div>
+
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group">
+              <label for="recStartDate">Start Date</label>
+              <input type="date" id="recStartDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="recNextDueDate">Next Due Date</label>
+              <input type="date" id="recNextDueDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="recEndDate">End Date (Optional)</label>
+            <input type="date" id="recEndDate" class="form-control">
+          </div>
+
+          <div class="form-row" style="display:flex;gap:24px;margin-top:8px;margin-bottom:8px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+              <input type="checkbox" id="recActive" checked style="width:18px;height:18px"> Active
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+              <input type="checkbox" id="recAutoCreate" style="width:18px;height:18px"> Auto-Create Transaction
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label for="recNotes">Notes</label>
+            <textarea id="recNotes" class="form-control" rows="2" placeholder="Optional notes..." maxlength="500"></textarea>
+          </div>
+
+          <div id="recurringError" class="form-error" style="display:none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelRecurring">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveRecurring">Save Schedule</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/recurring.js"></script>
+</body>
+</html>

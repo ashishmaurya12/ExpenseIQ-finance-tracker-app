@@ -58,9 +58,23 @@ function loadSettings() {
   }
 
   // Notification Toggles
-  document.getElementById('toggleBudgetAlerts').checked = localStorage.getItem('expenseiq_alert_budget') !== 'false';
-  document.getElementById('toggleBillReminders').checked = localStorage.getItem('expenseiq_alert_bills') !== 'false';
-  document.getElementById('toggleMonthlyDigest').checked = localStorage.getItem('expenseiq_alert_digest') !== 'false';
+  const notifToggle = document.getElementById('toggleBudgetAlerts');
+  const reminderToggle = document.getElementById('toggleBillReminders');
+
+  if (notifToggle) {
+    notifToggle.checked = user && typeof user.notificationsEnabled === 'boolean'
+      ? user.notificationsEnabled
+      : localStorage.getItem('expenseiq_alert_budget') !== 'false';
+  }
+  if (reminderToggle) {
+    reminderToggle.checked = user && typeof user.reminderAlertsEnabled === 'boolean'
+      ? user.reminderAlertsEnabled
+      : localStorage.getItem('expenseiq_alert_bills') !== 'false';
+  }
+  const digestToggle = document.getElementById('toggleMonthlyDigest');
+  if (digestToggle) {
+    digestToggle.checked = localStorage.getItem('expenseiq_alert_digest') !== 'false';
+  }
 }
 
 function attachSettingsListeners() {
@@ -211,8 +225,13 @@ function adjustColorBrightness(hex, percent) {
 async function handleSaveSettings() {
   const newName = document.getElementById('settingsName').value.trim();
   const newCurrency = document.getElementById('settingsCurrency').value;
-  const newDateFormat = document.getElementById('settingsDateFormat').value;
-  const newThreshold = document.getElementById('settingsBudgetAlert').value;
+  const newDateFormat = document.getElementById('settingsDateFormat') ? document.getElementById('settingsDateFormat').value : 'DD/MM/YYYY';
+  const newThreshold = document.getElementById('settingsBudgetAlert') ? document.getElementById('settingsBudgetAlert').value : '80';
+
+  const notifEl = document.getElementById('toggleBudgetAlerts');
+  const remEl = document.getElementById('toggleBillReminders');
+  const notificationsEnabled = notifEl ? notifEl.checked : true;
+  const reminderAlertsEnabled = remEl ? remEl.checked : true;
 
   if (!newName) {
     showToast('Please enter your name.', 'error');
@@ -220,9 +239,23 @@ async function handleSaveSettings() {
   }
 
   try {
-    const res = await apiUpdateProfile(newName, newCurrency);
+    const res = await apiFetch('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: newName,
+        currency: newCurrency,
+        notificationsEnabled,
+        reminderAlertsEnabled
+      })
+    });
+    if (res && res.user) {
+      setUser(res.user);
+    }
     localStorage.setItem('expenseiq_date_format', newDateFormat);
     localStorage.setItem('expenseiq_budget_threshold', newThreshold);
+    localStorage.setItem('expenseiq_alert_budget', notificationsEnabled);
+    localStorage.setItem('expenseiq_alert_bills', reminderAlertsEnabled);
+
     showToast(res.message || 'Profile & display settings saved!', 'success');
 
     setTimeout(() => {

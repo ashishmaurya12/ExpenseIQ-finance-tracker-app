@@ -4,13 +4,11 @@ const Budget = require('../models/Budget');
 const Goal = require('../models/Goal');
 
 /**
- * Generate deduplicated notifications for due/overdue reminders.
+ * Generate deduplicated notifications for due/overdue reminders based on reminderDaysBefore.
  */
 async function generateReminderNotifications(userId) {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+  const todayDate = new Date(todayStr);
 
   const remindersResult = await Reminder.findByUserId(userId, { status: 'all', page: 1, limit: 50 });
   const reminders = remindersResult.reminders || [];
@@ -20,7 +18,19 @@ async function generateReminderNotifications(userId) {
   for (const r of reminders) {
     if (r.status === 'completed' || r.status === 'dismissed') continue;
 
-    if (r.dueDate === todayStr) {
+    if (r.dueDate < todayStr) {
+      const dedupKey = `reminder_overdue_${r.id}_${todayStr}`;
+      const created = await Notification.create({
+        userId,
+        type: 'reminder',
+        title: 'Overdue Bill Alert',
+        message: `${r.title} (₹${r.amount}) is overdue.`,
+        priority: 'high',
+        dedupKey,
+        relatedEntityId: r.id
+      });
+      if (created) count++;
+    } else if (r.dueDate === todayStr) {
       const dedupKey = `reminder_today_${r.id}_${todayStr}`;
       const created = await Notification.create({
         userId,
@@ -32,30 +42,31 @@ async function generateReminderNotifications(userId) {
         relatedEntityId: r.id
       });
       if (created) count++;
-    } else if (r.dueDate === tomorrowStr) {
-      const dedupKey = `reminder_tomorrow_${r.id}_${todayStr}`;
-      const created = await Notification.create({
-        userId,
-        type: 'reminder',
-        title: 'Bill Due Tomorrow',
-        message: `${r.title} (₹${r.amount}) is due tomorrow.`,
-        priority: 'medium',
-        dedupKey,
-        relatedEntityId: r.id
-      });
-      if (created) count++;
-    } else if (r.dueDate < todayStr && (r.status === 'pending' || r.status === 'overdue')) {
-      const dedupKey = `reminder_overdue_${r.id}_${todayStr}`;
-      const created = await Notification.create({
-        userId,
-        type: 'reminder',
-        title: 'Overdue Bill Alert',
-        message: `${r.title} (₹${r.amount}) was due on ${r.dueDate}.`,
-        priority: 'high',
-        dedupKey,
-        relatedEntityId: r.id
-      });
-      if (created) count++;
+    } else if (r.dueDate > todayStr) {
+      const targetDate = new Date(r.dueDate);
+      const diffMs = targetDate.getTime() - todayDate.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      const reminderDaysBefore = Math.max(0, Math.min(30, parseInt(r.reminderDaysBefore, 10) ?? 3));
+
+      if (diffDays <= reminderDaysBefore && diffDays > 0) {
+        const isTomorrow = diffDays === 1;
+        const dedupKey = isTomorrow
+          ? `reminder_tomorrow_${r.id}_${todayStr}`
+          : `reminder_upcoming_${r.id}_${todayStr}`;
+
+        const created = await Notification.create({
+          userId,
+          type: 'reminder',
+          title: isTomorrow ? 'Bill Due Tomorrow' : 'Upcoming Bill Reminder',
+          message: isTomorrow
+            ? `${r.title} (₹${r.amount}) is due tomorrow.`
+            : `${r.title} (₹${r.amount}) is due in ${diffDays} day(s).`,
+          priority: isTomorrow ? 'medium' : 'low',
+          dedupKey,
+          relatedEntityId: r.id
+        });
+        if (created) count++;
+      }
     }
   }
 

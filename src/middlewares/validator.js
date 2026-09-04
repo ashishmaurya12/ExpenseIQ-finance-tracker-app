@@ -131,7 +131,7 @@ const SUPPORTED_CURRENCIES = [
  * Validate profile update input.
  */
 function validateProfileUpdate(req, res, next) {
-  const { name, currency } = req.body;
+  const { name, currency, notificationsEnabled, reminderAlertsEnabled } = req.body;
   const errors = [];
 
   if (name !== undefined && (!name || name.trim().length < 2)) {
@@ -142,6 +142,12 @@ function validateProfileUpdate(req, res, next) {
     if (!currStr || !/^[A-Z]{3}$/.test(currStr) || !SUPPORTED_CURRENCIES.includes(currStr)) {
       errors.push(`Valid 3-letter currency code (e.g. ${SUPPORTED_CURRENCIES.slice(0, 5).join(', ')}) is required.`);
     }
+  }
+  if (notificationsEnabled !== undefined && typeof notificationsEnabled !== 'boolean') {
+    errors.push('notificationsEnabled must be a boolean.');
+  }
+  if (reminderAlertsEnabled !== undefined && typeof reminderAlertsEnabled !== 'boolean') {
+    errors.push('reminderAlertsEnabled must be a boolean.');
   }
 
   if (errors.length > 0) {
