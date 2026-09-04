@@ -1,112 +1,63 @@
 # ExpenseIQ — Intelligent Personal Finance Tracker
 
-ExpenseIQ is a full-stack personal finance application built with Node.js, Express, MongoDB (with JSON storage fallback), and a modern vanilla JS frontend. It features deterministic insights, security-hardened OpenAI AI Assistant integration, and automated personal finance tools.
+ExpenseIQ is a full-stack personal finance management application built with Node.js, Express, MongoDB (with automated development JSON storage fallback), and a modern vanilla JavaScript frontend. It features security-hardened OpenAI AI Assistant integration, Financial Health Score 2.0, Cash-Flow Forecasting, Expense Anomaly Detection, Bill Reminders, Recurring Transaction Automation, and Notification Center alerts.
 
 ---
 
-## Phase 4A Features
+## 🌟 Key Features Overview
 
-### 1. Recurring Transactions
-- Automates recurring income and expenses (`daily`, `weekly`, `monthly`, `quarterly`, `yearly`).
-- Features safe month-end date calculations (e.g., Jan 31 + 1 month $\rightarrow$ Feb 28/29).
-- Controlled auto-creation service `processDueRecurringTransactions()` with strict idempotency checks to prevent duplicate transactions.
+### Phase 4B: Advanced Financial Intelligence & Analytics
+1. **Financial Health Score 2.0 (`/api/financial-health`)**
+   - Transparent 0–100 overall score evaluated across 6 weighted sub-components:
+     * **Savings Rate Score** (weight 25%)
+     * **Budget Adherence Score** (weight 20%)
+     * **Goal Progress Score** (weight 15%)
+     * **Debt Ratio Score** (weight 15%)
+     * **Expense Stability Score** (weight 15%)
+     * **Emergency Fund Ratio Score** (weight 10%)
+   - Letter grade assignments (`A`, `B`, `C`, `D`, `F`) with identified strengths, weaknesses, and personalized recommendations.
 
-### 2. Bill & Payment Reminders
-- Tracks upcoming and overdue bill payments.
-- Automatic overdue status transitions for past pending bills.
-- Full completion workflow marking bills completed with timestamps.
+2. **Cash-Flow Forecasting & Risk Evaluation (`/api/cash-flow`)**
+   - Deterministic 1–12 month cash-flow model based on weighted moving averages and upper/lower variance bounds.
+   - Risk evaluation system identifying cash-flow deficits, income volatility, accelerating expense growth, and short emergency fund runways.
 
-### 3. Notification Center
-- Smart notification center with periodically refreshed unread notification badge, pagination, mark read, mark all read, and deletion.
-- Configurable `reminderDaysBefore` window (0–30 days, default 3) controlling when reminder notifications trigger.
-- Automated deduplicated alert generation for bill due dates (due today, due tomorrow, overdue) using MongoDB compound unique indexes (`userId` + `dedupKey`).
-- User preference toggles (`notificationsEnabled`, `reminderAlertsEnabled`) to control notification generation and badge rendering.
-- Budget utilization threshold alerts (70%, 90%, 100%).
-- Savings goal milestone alerts and deadline warnings.
+3. **Expense Anomaly Detection (`/api/anomalies`)**
+   - Automated statistical outlier detection (Z-Score $\ge 2.0$ or category spending ratio $\ge 1.5\times$ expected average).
+   - Trigger scan integration with Notification Center for real-time anomaly alerts.
 
----
+4. **Advanced Analytics & Comparative Trends (`/api/analytics`)**
+   - Multi-period comparison (% change in income, expenses, net balance, and savings rate).
+   - Category breakdown, trend history, and stacked monthly performance visualizations.
 
-## Phase 4B Features — Advanced Financial Intelligence & Automation
+5. **AI-Powered Monthly Financial Report (`/api/financial-reports`)**
+   - 10-section structured AI executive summary: Executive Summary, Income Analysis, Expense Breakdown, Budget vs Actual, Goal Tracking, Savings & Cash Flow, Cash-Flow Risk, Anomaly Summary, Health Score Breakdown, and Actionable AI Recommendations.
 
-### 1. Financial Health Score 2.0
-- Transparent 0–100 overall score evaluated across 6 weighted sub-components:
-  * Savings Rate Score (weight 25%)
-  * Budget Adherence Score (weight 20%)
-  * Goal Progress Score (weight 15%)
-  * Debt Ratio Score (weight 15%)
-  * Expense Stability Score (weight 15%)
-  * Emergency Fund Ratio Score (weight 10%)
-- Grade assignments (`A`, `B`, `C`, `D`, `F`) with identified strengths, weaknesses, and personalized recommendations.
-
-### 2. Cash-Flow Forecasting & Risk Evaluation
-- Deterministic 1–12 month cash-flow model based on weighted moving averages and variance bounds (upper/lower confidence intervals).
-- Risk evaluation system identifying cash-flow deficits, income volatility, accelerating expense growth, and short emergency fund runways.
-
-### 3. Expense Anomaly Detection
-- Automated statistical outlier detection (Z-Score > 2.0 or category spike > 1.5x expected average).
-- Trigger scan integration with Notification Center for real-time anomaly alerts.
-
-### 4. Advanced Analytics & Comparative Trends
-- Multi-period comparison (% change in income, expenses, net balance, and savings rate).
-- Category breakdown, trend history, and stacked monthly performance visualizations.
-
-### 5. AI-Powered Monthly Financial Report
-- 10-section structured AI executive summary: Executive Summary, Income Analysis, Expense Breakdown, Budget vs Actual, Goal Tracking, Savings & Cash Flow, Cash-Flow Risk, Anomaly Summary, Health Score Breakdown, and Actionable AI Recommendations.
-
+### Phase 4A & Core Features
+- **Recurring Transactions (`/api/recurring`)**: Automated recurring income/expense execution (`daily`, `weekly`, `monthly`, `quarterly`, `yearly`) with month-end safety (e.g. Jan 31 + 1m $\rightarrow$ Feb 28/29) and concurrency claim protection.
+- **Bill Reminders (`/api/reminders`)**: Upcoming/overdue bill tracking, status transitions, and completion timestamps.
+- **Notification Center (`/api/notifications`)**: Periodic unread badge updates, configurable `reminderDaysBefore` window (0–30 days), budget threshold alerts (70%, 90%, 100%), and goal milestone notifications.
+- **AI Financial Assistant (`/api/ai/chat`)**: Security-hardened assistant with prompt-injection defenses, rate limiting (HTTP 429), and strict 503 provider error fallbacks.
 
 ---
 
-## API Endpoints (Phase 4A)
+## 🔒 Security Model & Storage Architecture
 
-### Recurring Transactions (`/api/recurring`)
-- `GET /api/recurring` — List user's recurring transactions (paginated).
-- `POST /api/recurring` — Create a recurring transaction schedule.
-- `GET /api/recurring/:id` — Get recurring transaction details.
-- `PUT /api/recurring/:id` — Update recurring transaction.
-- `DELETE /api/recurring/:id` — Delete recurring transaction schedule.
-- `POST /api/recurring/process` — Trigger due recurring transaction auto-creation.
+### Database Storage & Development Fallback
+- **MongoDB**: Used as primary database storage when configured and connected (`MONGODB_URI`).
+- **JSON File Fallback**: Automatically activates when MongoDB is unavailable or disconnected, persisting local development data in `data/*.json` files.
+- **Degraded Status Reporting**: `GET /api/health` accurately reports database status (`connected` or `degraded`).
 
-### Bill Reminders (`/api/reminders`)
-- `GET /api/reminders` — List user's bill reminders (supports status filter).
-- `POST /api/reminders` — Create a new bill reminder.
-- `GET /api/reminders/:id` — Get reminder details.
-- `PUT /api/reminders/:id` — Update reminder.
-- `DELETE /api/reminders/:id` — Delete reminder.
-- `POST /api/reminders/:id/complete` — Mark reminder as completed.
-
-### Notification Center (`/api/notifications`)
-- `GET /api/notifications` — List notifications with pagination (`page`, `limit`).
-- `PUT /api/notifications/:id/read` — Mark notification as read.
-- `POST /api/notifications/read-all` — Mark all user notifications as read.
-- `DELETE /api/notifications/:id` — Delete notification.
-
-### Advanced Analytics (`/api/analytics`)
-- `GET /api/analytics/overview` — Get financial metrics overview for period.
-- `GET /api/analytics/trends` — Get spending/income trends.
-- `GET /api/analytics/categories` — Get expense category breakdown.
-- `GET /api/analytics/monthly` — Get historical monthly performance.
-- `GET /api/analytics/comparison` — Compare two monthly periods.
-
-### Cash-Flow Forecasting (`/api/cash-flow`)
-- `GET /api/cash-flow/forecast` — Deterministic 1–12 month cash-flow forecast with confidence bounds.
-- `GET /api/cash-flow/risk` — Risk evaluation for cash-flow deficits, volatility, and runway.
-
-### Expense Anomalies (`/api/anomalies`)
-- `GET /api/anomalies` — List statistical transaction outliers.
-- `POST /api/anomalies/analyze` — Trigger anomaly scan and notification alerts.
-
-### Financial Health (`/api/financial-health`)
-- `GET /api/financial-health` — Get Health Score 2.0 (0–100, 6 components, grade, strengths, weaknesses).
-- `GET /api/financial-health/recommendations` — Get personalized health recommendations.
-
-### AI Monthly Reports (`/api/financial-reports`)
-- `GET /api/financial-reports/monthly` — Generate 10-section AI executive monthly report.
+### Security Controls
+- **JWT Authentication**: Password hashing with `bcryptjs` and signed JWT bearer tokens.
+- **Strict User Isolation**: All query operations enforce `userId` scoping based on authenticated token payload. Body, query, or parameter `userId` overrides are strictly ignored.
+- **AI Prompt-Injection Protection**: Untrusted input fields (notes, category names, goal titles) are strictly delimited in prompt construction. System instructions enforce trust hierarchy.
+- **Rate Limiting**: Rate limiter middleware prevents brute-force abuse on authentication and AI endpoints.
 
 ---
 
-## Environment Variables
+## 🛠️ Environment Variables & Installation
 
-Configure your environment in `.env`:
+Copy `.env.example` to create your local `.env` configuration:
 
 ```env
 PORT=3000
@@ -121,29 +72,22 @@ AI_ENABLED=true
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4o-mini
 
-# Recurring Scheduler Configuration (Phase 4A)
+# Recurring Scheduler Configuration
 RECURRING_SCHEDULER_ENABLED=false
 RECURRING_SCHEDULER_INTERVAL=3600000
 ```
 
----
-
-## Running the Application
-
-### Development Server
+### Installation & Execution
 ```bash
+npm install
 npm run dev
 ```
-Or start server:
-```bash
-npm start
-```
 
-Access application at `http://localhost:3000`.
+Server will start on `http://localhost:3000`.
 
 ---
 
-## Testing Instructions
+## 🧪 Testing Instructions
 
 Run the full automated deterministic test suite:
 
@@ -151,4 +95,25 @@ Run the full automated deterministic test suite:
 npm test
 ```
 
-All tests run offline without external API dependencies using Node.js native test runner (`node --test`).
+All 15 test suites execute deterministically using isolated storage environments:
+1. `analytics.test.js`
+2. `cash_flow.test.js`
+3. `anomalies.test.js`
+4. `financial_health.test.js`
+5. `financial_reports.test.js`
+6. `notifications.test.js`
+7. `recurring.test.js`
+8. `reminders.test.js`
+9. `security_isolation.test.js`
+10. `ai_deterministic.test.js`
+11. `ai_endpoints.test.js`
+12. `context.test.js`
+13. `context_accuracy.test.js`
+14. `regression.test.js`
+15. `test_isolation_regression.test.js`
+
+---
+
+## 📌 Limitations
+- **Cash-Flow Forecasting**: Uses deterministic weighted moving averages and active recurring transactions. It does not employ complex neural network or machine learning models.
+- **AI Provider Dependency**: OpenAI API calls require a valid `OPENAI_API_KEY`. When offline or unavailable, ExpenseIQ falls back gracefully to structured deterministic reports and HTTP 503 provider responses.
