@@ -13,6 +13,7 @@ const transactionSchema = new mongoose.Schema({
   category: { type: String, required: true },
   date: { type: String, required: true },
   note: { type: String, default: '' },
+  recurringKey: { type: String, default: null, index: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date }
 });
@@ -21,6 +22,7 @@ transactionSchema.index({ userId: 1, date: -1 });
 transactionSchema.index({ userId: 1, category: 1 });
 transactionSchema.index({ userId: 1, type: 1 });
 transactionSchema.index({ userId: 1, date: -1, category: 1 });
+transactionSchema.index({ userId: 1, recurringKey: 1 }, { unique: true, sparse: true });
 
 const TransactionModel = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
@@ -142,9 +144,26 @@ async function findById(id, userId) {
 }
 
 /**
+ * Find transaction by user ID and deterministic recurring key.
+ */
+async function findByRecurringKey(userId, recurringKey) {
+  if (!recurringKey) return null;
+  if (isMongoConnected()) {
+    const t = await TransactionModel.findOne({ userId, recurringKey }).lean();
+    if (!t) return null;
+    delete t._id;
+    delete t.__v;
+    return t;
+  }
+  assertProductionStorage();
+  const transactions = readData(FILE);
+  return transactions.find(t => t.userId === userId && t.recurringKey === recurringKey) || null;
+}
+
+/**
  * Create a new transaction.
  */
-async function create({ userId, type, amount, category, date, note }) {
+async function create({ userId, type, amount, category, date, note, recurringKey }) {
   const newTxn = {
     id: generateId(),
     userId,
@@ -153,6 +172,7 @@ async function create({ userId, type, amount, category, date, note }) {
     category,
     date,
     note: note || '',
+    ...(recurringKey ? { recurringKey } : {}),
     createdAt: new Date().toISOString()
   };
 
@@ -166,6 +186,14 @@ async function create({ userId, type, amount, category, date, note }) {
 
   assertProductionStorage();
   const transactions = readData(FILE);
+  if (recurringKey) {
+    const exists = transactions.some(t => t.userId === userId && t.recurringKey === recurringKey);
+    if (exists) {
+      const err = new Error('Duplicate recurring transaction occurrence');
+      err.code = 11000;
+      throw err;
+    }
+  }
   transactions.push(newTxn);
   writeData(FILE, transactions);
   return newTxn;
@@ -544,6 +572,7 @@ module.exports = {
   TransactionModel,
   findByUserId,
   findById,
+  findByRecurringKey,
   create,
   update,
   remove,

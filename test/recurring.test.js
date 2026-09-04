@@ -267,4 +267,84 @@ test('Recurring Transactions Suite (Phase 4A)', async (t) => {
       assert.equal(totalProcessed, 1, 'Concurrent execution produces exactly 1 transaction occurrence');
     }
   });
+
+  await t.test('6. Failure Recovery, Retry, endDate & Yearly Processing', async () => {
+    if (!userAToken || !userAId) return;
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // 1. Transaction Creation Failure Recovery & Retry
+    const recFail = await request('POST', '/recurring', {
+      type: 'expense',
+      amount: 1200,
+      category: 'Subscription',
+      description: 'Stream Service',
+      frequency: 'monthly',
+      startDate: todayStr,
+      nextDueDate: todayStr,
+      autoCreate: true
+    }, userAToken);
+    const recFailId = recFail.body.recurring.id;
+
+    // Monkey patch Transaction.create to simulate a temporary DB failure
+    const originalCreate = Transaction.create;
+    let shouldFail = true;
+    Transaction.create = async (data) => {
+      if (shouldFail && data.recurringKey && data.recurringKey.includes(recFailId)) {
+        throw new Error('Simulated Database Write Failure');
+      }
+      return originalCreate(data);
+    };
+
+    // First attempt -> fails and reverts state
+    const failAttempt = await processDueRecurringTransactions(userAId);
+    assert.equal(failAttempt.processedCount, 0, 'Failed creation returns 0 processed count');
+
+    // Verify occurrence remains due & active for retry
+    const itemAfterFail = await RecurringTransaction.findById(recFailId, userAId);
+    assert.equal(itemAfterFail.nextDueDate, todayStr, 'Next due date remains at current due date for retry');
+    assert.equal(itemAfterFail.active, true, 'Item remains active for retry');
+
+    // Restore creation function & retry -> succeeds
+    shouldFail = false;
+    const retryAttempt = await processDueRecurringTransactions(userAId);
+    assert.ok(retryAttempt.processedCount >= 1, 'Retry successfully creates transaction');
+
+    // Cleanup monkey patch
+    Transaction.create = originalCreate;
+
+    // 2. Already Processed Occurrence (reprocessing is a no-op)
+    const reprocessAttempt = await processDueRecurringTransactions(userAId);
+    assert.equal(reprocessAttempt.processedCount, 0, 'Reprocessing already processed occurrence is no-op');
+
+    // 3. endDate Deactivation
+    const pastEndRec = await request('POST', '/recurring', {
+      type: 'expense',
+      amount: 500,
+      category: 'Insurance',
+      description: 'Term Insurance',
+      frequency: 'monthly',
+      startDate: todayStr,
+      nextDueDate: todayStr,
+      endDate: todayStr, // endDate reached today
+      autoCreate: true
+    }, userAToken);
+    const pastEndId = pastEndRec.body.recurring.id;
+
+    await processDueRecurringTransactions(userAId);
+    const itemAfterEnd = await RecurringTransaction.findById(pastEndId, userAId);
+    assert.equal(itemAfterEnd.active, false, 'Recurring transaction deactivates after endDate reached');
+
+    // 4. Yearly Recurrence
+    const yearlyRec = await request('POST', '/recurring', {
+      type: 'expense',
+      amount: 12000,
+      category: 'Tax',
+      description: 'Annual Property Tax',
+      frequency: 'yearly',
+      startDate: '2026-01-01',
+      nextDueDate: '2026-01-01',
+      autoCreate: true
+    }, userAToken);
+    assert.equal(yearlyRec.status, 201);
+  });
 });

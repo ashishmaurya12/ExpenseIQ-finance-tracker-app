@@ -81,6 +81,14 @@ async function processDueRecurringTransactions(userId = null) {
     }
 
     const currentDueDate = item.nextDueDate;
+    const occurrenceKey = `${item.id}_${currentDueDate}`;
+
+    // Pre-check: skip if transaction with this occurrence key already exists
+    const existingTxn = await Transaction.findByRecurringKey(item.userId, occurrenceKey);
+    if (existingTxn) {
+      continue;
+    }
+
     const calculatedNextDueDate = calculateNextDueDate(currentDueDate, item.frequency);
     const shouldDeactivate = Boolean(item.endDate && calculatedNextDueDate > item.endDate);
 
@@ -100,19 +108,25 @@ async function processDueRecurringTransactions(userId = null) {
     try {
       const note = item.description ? `[Auto-recurring] ${item.description}` : `[Auto-recurring] ${item.category}`;
 
-      // Create the actual financial transaction
+      // Create the actual financial transaction with deterministic occurrence key
       const newTxn = await Transaction.create({
         userId: item.userId,
         type: item.type,
         amount: item.amount,
         category: item.category,
         date: currentDueDate,
-        note
+        note,
+        recurringKey: occurrenceKey
       });
 
       createdTransactions.push(newTxn);
       processedCount++;
     } catch (err) {
+      if (err.code === 11000 || (err.message && err.message.includes('duplicate'))) {
+        console.warn(`Duplicate recurring transaction attempt suppressed for key ${occurrenceKey}`);
+        continue;
+      }
+
       console.error(`Error creating transaction for recurring item ${item.id}:`, err.message);
       // Recovery: Revert claimed schedule state so occurrence remains recoverable on retry
       await RecurringTransaction.update(item.id, item.userId, {

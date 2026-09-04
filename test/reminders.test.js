@@ -259,4 +259,90 @@ test('Bill Reminders Suite (Phase 4A)', async (t) => {
     const nDism = await Notification.find({ userId: userAId, relatedEntityId: rDism.id });
     assert.equal(nDism.length, 0, 'Dismissed reminder did NOT generate notification');
   });
+
+  await t.test('5. Extensive reminderDaysBefore Numeric Edge Cases & Overdue Handling', async () => {
+    if (!userAId) return;
+
+    const notificationService = require('../src/services/notificationService');
+    const Notification = require('../src/models/Notification');
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const d30 = new Date();
+    d30.setDate(d30.getDate() + 30);
+    const in30DaysStr = d30.toISOString().slice(0, 10);
+
+    // Test reminderDaysBefore = 31 (clamped to 30) -> should trigger for in30Days
+    const r31 = await Reminder.create({
+      userId: userAId,
+      title: '31 Days Clamp Test',
+      amount: 999,
+      dueDate: in30DaysStr,
+      reminderDaysBefore: 31,
+      status: 'pending'
+    });
+
+    // Test reminderDaysBefore = -1 (clamped to 0) -> should NOT trigger for in30Days
+    const rNeg = await Reminder.create({
+      userId: userAId,
+      title: 'Negative Days Clamp Test',
+      amount: 888,
+      dueDate: in30DaysStr,
+      reminderDaysBefore: -1,
+      status: 'pending'
+    });
+
+    // Test reminderDaysBefore = null (defaults to 3) -> should NOT trigger for in30Days
+    const rNull = await Reminder.create({
+      userId: userAId,
+      title: 'Null Days Default Test',
+      amount: 777,
+      dueDate: in30DaysStr,
+      reminderDaysBefore: null,
+      status: 'pending'
+    });
+
+    // Test reminderDaysBefore = "invalid_string" (defaults to 3)
+    const rInvalid = await Reminder.create({
+      userId: userAId,
+      title: 'Invalid String Days Default Test',
+      amount: 666,
+      dueDate: in30DaysStr,
+      reminderDaysBefore: 'invalid_string',
+      status: 'pending'
+    });
+
+    // Overdue reminder
+    const rOverdue = await Reminder.create({
+      userId: userAId,
+      title: 'Overdue Notification Test',
+      amount: 1234,
+      dueDate: '2025-06-01',
+      reminderDaysBefore: 3,
+      status: 'overdue'
+    });
+
+    // Run notification generation run 1
+    await notificationService.generateReminderNotifications(userAId);
+
+    const n31 = await Notification.find({ userId: userAId, relatedEntityId: r31.id });
+    assert.equal(n31.length, 1, 'reminderDaysBefore=31 clamped to 30 and generated notification for in30Days');
+
+    const nNeg = await Notification.find({ userId: userAId, relatedEntityId: rNeg.id });
+    assert.equal(nNeg.length, 0, 'reminderDaysBefore=-1 clamped to 0 and did NOT generate notification for in30Days');
+
+    const nNull = await Notification.find({ userId: userAId, relatedEntityId: rNull.id });
+    assert.equal(nNull.length, 0, 'reminderDaysBefore=null defaulted to 3 and did NOT generate notification for in30Days');
+
+    const nInvalid = await Notification.find({ userId: userAId, relatedEntityId: rInvalid.id });
+    assert.equal(nInvalid.length, 0, 'reminderDaysBefore="invalid_string" defaulted to 3 and did NOT generate notification for in30Days');
+
+    const nOverdue = await Notification.find({ userId: userAId, relatedEntityId: rOverdue.id });
+    assert.equal(nOverdue.length, 1, 'Overdue reminder generated notification');
+
+    // Run notification generation run 2 (Repeated Polling) -> NO DUPLICATES
+    await notificationService.generateReminderNotifications(userAId);
+
+    const nOverdue2 = await Notification.find({ userId: userAId, relatedEntityId: rOverdue.id });
+    assert.equal(nOverdue2.length, 1, 'Repeated polling did NOT create duplicate notifications');
+  });
 });

@@ -83,22 +83,23 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
     } catch {}
   });
 
-  await t.test('1. Health Endpoint Healthy Contract (GET /api/health → 200 OK or 503 Degraded)', async () => {
+  await t.test('1. Health Endpoint Healthy Contract (GET /api/health → 200 OK)', async () => {
+    Object.defineProperty(mongoose.connection, 'readyState', {
+      value: 1,
+      configurable: true,
+      writable: true
+    });
+
     const health = await request('GET', '/health');
-    assert.ok([200, 503].includes(health.status), 'Health status is either 200 (connected) or 503 (degraded)');
-    if (health.status === 200) {
-      assert.equal(health.body.success, true);
-      assert.equal(health.body.status, 'ok');
-      assert.equal(health.body.database, 'connected');
-    } else {
-      assert.equal(health.body.success, false);
-      assert.equal(health.body.status, 'degraded');
-      assert.equal(health.body.database, 'disconnected');
-    }
+    assert.equal(health.status, 200, 'Healthy DB returns exact HTTP 200');
+    assert.equal(health.body.success, true);
+    assert.equal(health.body.status, 'ok');
+    assert.equal(health.body.database, 'connected');
+
+    delete mongoose.connection.readyState;
   });
 
   await t.test('2. Health Endpoint Degraded Contract (GET /api/health → 503 Degraded)', async () => {
-    // Temporarily override readyState on instance
     Object.defineProperty(mongoose.connection, 'readyState', {
       value: 0,
       configurable: true,
@@ -108,10 +109,9 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
     const degraded = await request('GET', '/health');
     assert.equal(degraded.status, 503, 'Degraded DB returns exact HTTP 503');
     assert.equal(degraded.body.success, false);
-    assert.equal(degraded.body.status, 'degraded', 'Disconnected DB returns status degraded');
-    assert.equal(degraded.body.database, 'disconnected', 'Disconnected DB returns database disconnected');
+    assert.equal(degraded.body.status, 'degraded');
+    assert.equal(degraded.body.database, 'disconnected');
 
-    // Delete instance property to restore prototype getter
     delete mongoose.connection.readyState;
   });
 

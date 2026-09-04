@@ -110,6 +110,11 @@ async function findById(id, userId) {
   return all.find(item => item.id === id && item.userId === userId) || null;
 }
 
+function parseReminderDaysBefore(val) {
+  const parsed = parseInt(val, 10);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(30, parsed)) : 3;
+}
+
 /**
  * Create a new reminder.
  */
@@ -124,7 +129,7 @@ async function create(data) {
     recurringTransactionId: data.recurringTransactionId || null,
     status: data.status || 'pending',
     priority: data.priority || 'medium',
-    reminderDaysBefore: data.reminderDaysBefore !== undefined ? Number(data.reminderDaysBefore) : 3,
+    reminderDaysBefore: parseReminderDaysBefore(data.reminderDaysBefore),
     notes: data.notes ? data.notes.trim() : '',
     completedAt: data.completedAt || null,
     createdAt: new Date().toISOString(),
@@ -158,7 +163,11 @@ async function update(id, userId, updates) {
   const patch = { updatedAt: new Date().toISOString() };
   Object.keys(updates).forEach(key => {
     if (allowed.includes(key) && updates[key] !== undefined) {
-      patch[key] = updates[key];
+      if (key === 'reminderDaysBefore') {
+        patch[key] = parseReminderDaysBefore(updates[key]);
+      } else {
+        patch[key] = updates[key];
+      }
     }
   });
 
