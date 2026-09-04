@@ -132,7 +132,9 @@ function handleShutdown(signal) {
   }
 }
 
-process.on('SIGINT', () => handleShutdown('SIGINT'));
-process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+if (require.main === module) {
+  startServer();
+}
 
-startServer();
+module.exports = app;
+

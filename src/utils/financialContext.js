@@ -39,7 +39,7 @@ function getPreviousMonthString(dateObj = new Date()) {
 
 /**
  * Sanitize untrusted user text (notes, categories, goal names) for AI context inclusion.
- * Preserves all Unicode languages (Hindi, Spanish, Japanese, etc.) while stripping
+ * Preserves all Unicode languages (Hindi, Spanish, Japanese, Arabic, Emoji) while stripping
  * control characters, dangerous HTML markup, and excessive whitespace.
  */
 function sanitizeText(text, maxLen = 60) {
@@ -86,18 +86,18 @@ async function buildFinancialContext(userId) {
   const currentMonthStr = getMonthString();
   const previousMonthStr = getPreviousMonthString();
 
-  // 2. Fetch Summaries & Data
-  const [currentSummary, previousSummary, userBudgets, userGoals, insightsData] = await Promise.all([
+  // 2. Fetch Summaries & Real Application Data
+  const [currentSummary, previousSummary, userBudgetsWithSpending, userGoals, insightsData] = await Promise.all([
     Transaction.getSummary(userId, currentMonthStr),
     Transaction.getSummary(userId, previousMonthStr),
-    Budget.findByUserId(userId),
+    Budget.getWithSpending(userId, currentMonthStr),
     Goal.findByUserId(userId),
     generateInsights(userId).catch(() => null)
   ]);
 
   // Current Month Stats
-  const cIncome = currentSummary ? currentSummary.totalIncome || 0 : 0;
-  const cExpenses = currentSummary ? currentSummary.totalExpenses || 0 : 0;
+  const cIncome = currentSummary ? Number(currentSummary.totalIncome) || 0 : 0;
+  const cExpenses = currentSummary ? Number(currentSummary.totalExpenses) || 0 : 0;
   const cSavings = cIncome - cExpenses;
   const cSavingsRate = cIncome > 0 ? ((cSavings / cIncome) * 100).toFixed(1) : '0.0';
 
@@ -105,13 +105,13 @@ async function buildFinancialContext(userId) {
   const categoryBreakdown = {};
   if (currentSummary && Array.isArray(currentSummary.byCategory)) {
     currentSummary.byCategory.slice(0, 8).forEach(c => {
-      categoryBreakdown[sanitizeText(c.category, 30)] = c.total;
+      categoryBreakdown[sanitizeText(c.category, 30)] = Number(c.total) || 0;
     });
   }
 
   // Previous Month Stats
-  const pIncome = previousSummary ? previousSummary.totalIncome || 0 : 0;
-  const pExpenses = previousSummary ? previousSummary.totalExpenses || 0 : 0;
+  const pIncome = previousSummary ? Number(previousSummary.totalIncome) || 0 : 0;
+  const pExpenses = previousSummary ? Number(previousSummary.totalExpenses) || 0 : 0;
   const pSavings = pIncome - pExpenses;
 
   // Month-over-Month % change in expenses
@@ -133,7 +133,7 @@ async function buildFinancialContext(userId) {
     const txnsList = Array.isArray(recentTxnsResult) ? recentTxnsResult : (recentTxnsResult.transactions || []);
     topRecentExpenses = txnsList.slice(0, 5).map(t => ({
       category: sanitizeText(t.category, 30),
-      amount: t.amount,
+      amount: Number(t.amount) || 0,
       date: t.date ? String(t.date).slice(0, 10) : '',
       note: sanitizeText(t.note, 50)
     }));
@@ -141,14 +141,14 @@ async function buildFinancialContext(userId) {
     topRecentExpenses = [];
   }
 
-  // Active Budgets Summary (Current Month, max 10)
-  const activeBudgets = (userBudgets || [])
+  // Active Budgets Summary (Current Month, max 10) — using monthlyLimit from Budget model
+  const activeBudgets = (userBudgetsWithSpending || [])
     .filter(b => !b.month || b.month === currentMonthStr)
     .slice(0, 10)
     .map(b => {
-      const spent = b.spent || 0;
-      const limit = b.amount || 0;
-      const remaining = limit - spent;
+      const limit = Number(b.monthlyLimit) || 0;
+      const spent = Number(b.spent) || 0;
+      const remaining = Number(b.remaining) !== undefined ? Number(b.remaining) : (limit - spent);
       const utilPct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
       return {
         category: sanitizeText(b.category, 30),
@@ -159,22 +159,22 @@ async function buildFinancialContext(userId) {
       };
     });
 
-  // Goals Summary (max 5)
+  // Goals Summary (max 5) — using savedAmount and deadline from Goal model
   const goalsSummary = (userGoals || []).slice(0, 5).map(g => {
-    const target = g.targetAmount || 0;
-    const current = g.currentAmount || 0;
-    const pct = target > 0 ? Math.round((current / target) * 100) : 0;
+    const target = Number(g.targetAmount) || 0;
+    const saved = Number(g.savedAmount) || 0;
+    const pct = target > 0 ? Math.round((saved / target) * 100) : 0;
     return {
       name: sanitizeText(g.name, 35),
       targetAmount: target,
-      currentAmount: current,
-      progressPct: `${pct}%`,
-      targetDate: g.targetDate ? String(g.targetDate).slice(0, 10) : 'N/A'
+      savedAmount: saved,
+      deadline: g.deadline ? String(g.deadline).slice(0, 10) : 'N/A',
+      progressPct: `${pct}%`
     };
   });
 
   // Health & Insights summary (max 3 anomalies, max 3 key insights)
-  const healthScore = insightsData ? insightsData.healthScore || 100 : 100;
+  const healthScore = insightsData ? Number(insightsData.healthScore) || 100 : 100;
   const anomalies = insightsData && Array.isArray(insightsData.anomalies) ? insightsData.anomalies.slice(0, 3) : [];
   const topInsights = insightsData && Array.isArray(insightsData.insights) ? insightsData.insights.slice(0, 3) : [];
 
@@ -205,9 +205,9 @@ async function buildFinancialContext(userId) {
       anomaliesCount: anomalies.length,
       anomalies: anomalies.map(a => ({
         category: sanitizeText(a.category, 30),
-        amount: a.amount,
-        average: a.average,
-        ratio: a.ratio
+        amount: Number(a.amount) || 0,
+        average: Number(a.average) || 0,
+        ratio: Number(a.ratio) || 0
       })),
       keyInsights: topInsights.map(i => sanitizeText(i.title || i.message || i, 60))
     }
