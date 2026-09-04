@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('http');
@@ -69,8 +70,8 @@ test('Deterministic AI Endpoints & Fallback Contract Suite', async (t) => {
       password: 'Password123!',
       currency: 'INR'
     });
-    userToken = reg.body.token;
-    userId = reg.body.user.id;
+    userToken = reg.body ? reg.body.token : null;
+    userId = reg.body && reg.body.user ? reg.body.user.id : null;
   });
 
   t.after(async () => {
@@ -78,10 +79,12 @@ test('Deterministic AI Endpoints & Fallback Contract Suite', async (t) => {
     delete process.env.AI_ENABLED;
     if (server) {
       await new Promise(res => server.close(res));
+      server = null;
     }
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-    }
+    try {
+      await mongoose.connection.close(true);
+      await mongoose.disconnect();
+    } catch {}
   });
 
   await t.test('TEST A — AI Success returns HTTP 200 & reply', async () => {

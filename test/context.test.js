@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
@@ -6,20 +7,16 @@ const User = require('../src/models/User');
 const Budget = require('../src/models/Budget');
 const Goal = require('../src/models/Goal');
 const Transaction = require('../src/models/Transaction');
+const { connectDB } = require('../src/config/db');
 const { buildFinancialContext, sanitizeText } = require('../src/utils/financialContext');
 
 test('Financial Context Correctness Suite', async (t) => {
-  // Connect DB
-  try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/expenseiq');
-  } catch (e) {
-    // Mongo notice
-  }
-
   const timestamp = Date.now();
   let testUser;
 
   t.before(async () => {
+    await connectDB();
+
     testUser = await User.create({
       name: 'Context Test User',
       email: `context_test_${timestamp}@example.com`,
@@ -29,15 +26,18 @@ test('Financial Context Correctness Suite', async (t) => {
   });
 
   t.after(async () => {
-    if (testUser && testUser.id) {
-      await User.UserModel.deleteOne({ id: testUser.id });
-      await Budget.BudgetModel.deleteMany({ userId: testUser.id });
-      await Goal.GoalModel.deleteMany({ userId: testUser.id });
-      await Transaction.TransactionModel.deleteMany({ userId: testUser.id });
+    if (testUser && testUser.id && mongoose.connection.readyState === 1) {
+      try {
+        await User.UserModel.deleteOne({ id: testUser.id });
+        await Budget.BudgetModel.deleteMany({ userId: testUser.id });
+        await Goal.GoalModel.deleteMany({ userId: testUser.id });
+        await Transaction.TransactionModel.deleteMany({ userId: testUser.id });
+      } catch {}
     }
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-    }
+    try {
+      await mongoose.connection.close(true);
+      await mongoose.disconnect();
+    } catch {}
   });
 
   await t.test('A. Budget Fields: monthlyLimit and spent correctly populates in context', async () => {

@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('http');
@@ -69,8 +70,8 @@ test('AI Endpoints & Security Hardening Suite', async (t) => {
       password: 'Password123!',
       currency: 'INR'
     });
-    userAToken = regA.body.token;
-    userAId = regA.body.user.id;
+    userAToken = regA.body ? regA.body.token : null;
+    userAId = regA.body && regA.body.user ? regA.body.user.id : null;
 
     // Register User B
     const regB = await request('POST', '/auth/register', {
@@ -79,8 +80,8 @@ test('AI Endpoints & Security Hardening Suite', async (t) => {
       password: 'Password123!',
       currency: 'INR'
     });
-    userBToken = regB.body.token;
-    userBId = regB.body.user.id;
+    userBToken = regB.body ? regB.body.token : null;
+    userBId = regB.body && regB.body.user ? regB.body.user.id : null;
   });
 
   t.after(async () => {
@@ -88,10 +89,12 @@ test('AI Endpoints & Security Hardening Suite', async (t) => {
     delete process.env.AI_ENABLED;
     if (server) {
       await new Promise(res => server.close(res));
+      server = null;
     }
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-    }
+    try {
+      await mongoose.connection.close(true);
+      await mongoose.disconnect();
+    } catch {}
   });
 
   await t.test('1. Authentication & JWT Validation (401 Unauthorized)', async () => {

@@ -6,8 +6,9 @@ const { MONGODB_URI } = require('./config');
  */
 async function connectDB() {
   try {
+    const timeoutMs = process.env.NODE_ENV === 'test' ? 500 : 5000;
     const conn = await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000 // Fast timeout if MongoDB is not running locally
+      serverSelectionTimeoutMS: timeoutMs
     });
     console.log(`  🍃 MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
     return true;
