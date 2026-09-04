@@ -68,15 +68,16 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const current = await Budget.findById(req.params.id, req.user.id);
+    if (!current) {
+      return res.status(404).json({
+        success: false,
+        message: 'Budget not found.'
+      });
+    }
+
     const { category, month } = req.body;
     if (category || month !== undefined) {
-      const current = await Budget.findById(req.params.id, req.user.id);
-      if (!current) {
-        return res.status(404).json({
-          success: false,
-          message: 'Budget not found.'
-        });
-      }
       const newCat = category || current.category;
       const newMonth = month !== undefined ? (month ? month.trim() : null) : current.month;
       
@@ -90,13 +91,6 @@ async function update(req, res, next) {
     }
 
     const budget = await Budget.update(req.params.id, req.user.id, req.body);
-
-    if (!budget) {
-      return res.status(404).json({
-        success: false,
-        message: 'Budget not found.'
-      });
-    }
 
     res.json({
       success: true,

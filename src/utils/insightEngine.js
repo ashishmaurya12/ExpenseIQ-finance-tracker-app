@@ -24,6 +24,7 @@ async function generateInsights(userId) {
   const currentCategoryExpenses = {};
   const categoryTxnAmounts = {};
 
+  let mongoAnomaliesComputed = [];
   const isMongo = mongoose.connection.readyState === 1;
 
   if (isMongo && Transaction.TransactionModel) {
@@ -43,13 +44,55 @@ async function generateInsights(userId) {
             { $match: { type: 'expense', date: { $regex: `^${prevMonth}` } } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
           ],
-          categoryAverages: [
+          anomalies: [
             { $match: { type: 'expense' } },
-            { $group: { _id: '$category', avgAmount: { $avg: '$amount' }, count: { $sum: 1 } } }
-          ],
-          currentMonthExpenses: [
-            { $match: { type: 'expense', date: { $regex: `^${currentMonth}` }, amount: { $gte: 500 } } },
-            { $project: { id: 1, date: 1, category: 1, amount: 1, note: 1 } }
+            {
+              $group: {
+                _id: '$category',
+                avgAmount: { $avg: '$amount' },
+                count: { $sum: 1 },
+                currentMonthItems: {
+                  $push: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $gte: ['$date', `${currentMonth}-01`] },
+                          { $lte: ['$date', `${currentMonth}-31`] },
+                          { $gte: ['$amount', 500] }
+                        ]
+                      },
+                      { id: '$id', date: '$date', amount: '$amount', note: '$note' },
+                      '$$REMOVE'
+                    ]
+                  }
+                }
+              }
+            },
+            { $match: { count: { $gte: 2 } } },
+            { $unwind: '$currentMonthItems' },
+            {
+              $match: {
+                $expr: {
+                  $gte: ['$currentMonthItems.amount', { $multiply: [2.0, '$avgAmount'] }]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                id: '$currentMonthItems.id',
+                date: '$currentMonthItems.date',
+                category: '$_id',
+                amount: '$currentMonthItems.amount',
+                average: { $round: ['$avgAmount', 0] },
+                ratio: {
+                  $toString: {
+                    $round: [{ $divide: ['$currentMonthItems.amount', '$avgAmount'] }, 1]
+                  }
+                },
+                note: { $ifNull: ['$currentMonthItems.note', 'Unusually large transaction'] }
+              }
+            }
           ]
         }
       }
@@ -72,37 +115,17 @@ async function generateInsights(userId) {
       prevExpense = facetResult.prevMonthTotals[0].total || 0;
     }
 
-    const mongoAnomalies = [];
-    const catStatsMap = {};
-    if (facetResult && facetResult.categoryAverages) {
-      facetResult.categoryAverages.forEach(item => {
-        if (item._id) {
-          catStatsMap[item._id.trim()] = { avgAmount: item.avgAmount, count: item.count };
-        }
-      });
+    if (facetResult && facetResult.anomalies) {
+      mongoAnomaliesComputed = facetResult.anomalies.map(a => ({
+        id: a.id,
+        date: a.date,
+        category: a.category,
+        amount: a.amount,
+        average: Number(a.average),
+        ratio: String(a.ratio),
+        note: a.note ? String(a.note) : 'Unusually large transaction'
+      }));
     }
-
-    if (facetResult && facetResult.currentMonthExpenses) {
-      facetResult.currentMonthExpenses.forEach(t => {
-        const cat = (t.category || 'Other').trim();
-        const stats = catStatsMap[cat];
-        if (stats && stats.count >= 2) {
-          const avg = stats.avgAmount;
-          if (t.amount >= 500 && t.amount >= avg * 2.0) {
-            mongoAnomalies.push({
-              id: t.id,
-              date: t.date,
-              category: cat,
-              amount: t.amount,
-              average: Math.round(avg),
-              ratio: (t.amount / avg).toFixed(1),
-              note: t.note || 'Unusually large transaction'
-            });
-          }
-        }
-      });
-    }
-    mongoAnomaliesComputed = mongoAnomalies;
   } else {
     const transactions = await Transaction.findByUserId(userId);
 

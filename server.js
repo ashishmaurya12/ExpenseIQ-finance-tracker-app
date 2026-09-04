@@ -104,6 +104,9 @@ async function startServer() {
   const connected = await connectDB();
   if (connected) {
     await migrateJsonToMongo();
+  } else if (process.env.NODE_ENV === 'production') {
+    console.error('  ❌ FATAL ERROR: Could not connect to MongoDB in production mode. Application server startup aborted.');
+    process.exit(1);
   }
 
   server = app.listen(PORT, () => {
