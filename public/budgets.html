@@ -17,9 +17,17 @@
           <h1>Budgets</h1>
           <p class="subtitle">Set monthly limits and track your spending</p>
         </div>
-        <button class="btn btn-primary" id="btnAddBudget">
-          + Add Budget
-        </button>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label for="budgetMonthSelect" style="font-size:0.85rem;font-weight:600;color:var(--text-secondary)">📅 Month:</label>
+            <select id="budgetMonthSelect" class="form-control" style="min-width:180px;font-weight:600">
+              <option value="">Current Month</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="btnAddBudget">
+            + Add Budget
+          </button>
+        </div>
       </div>
 
       <!-- Budget Summary -->

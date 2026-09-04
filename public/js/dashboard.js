@@ -11,18 +11,71 @@ let myIncomeBreakdownChart = null;
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
   initSidebar('dashboard');
+  populateDashboardCategoryDropdown();
+  attachDashboardModalListeners();
+  
+  const monthSelect = document.getElementById('dashboardMonthSelect');
+  if (monthSelect) {
+    monthSelect.addEventListener('change', () => {
+      loadDashboard(monthSelect.value);
+    });
+  }
+
   loadDashboard();
+
+  window.addEventListener('themeChanged', () => {
+    const selectedMonth = monthSelect ? monthSelect.value : null;
+    loadDashboard(selectedMonth);
+  });
 });
 
-async function loadDashboard() {
+function populateDashboardCategoryDropdown() {
+  const txnCat = document.getElementById('txnCategory');
+  if (!txnCat) return;
+  txnCat.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    txnCat.insertAdjacentHTML('beforeend',
+      `<option value="${cat}">${getCategoryIcon(cat)} ${cat}</option>`
+    );
+  });
+}
+
+function attachDashboardModalListeners() {
+  const modalClose = document.getElementById('modalClose');
+  const btnCancel = document.getElementById('btnCancelTxn');
+  const modalOverlay = document.getElementById('transactionModal');
+  const btnSave = document.getElementById('btnSaveTxn');
+
+  if (modalClose) modalClose.addEventListener('click', () => closeModal('transactionModal'));
+  if (btnCancel) btnCancel.addEventListener('click', () => closeModal('transactionModal'));
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) closeModal('transactionModal');
+    });
+  }
+  if (btnSave) btnSave.addEventListener('click', handleDashboardSave);
+
+  const form = document.getElementById('transactionForm');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleDashboardSave();
+    });
+  }
+}
+
+async function loadDashboard(selectedMonth = null) {
   try {
-    // Load summary, recent transactions, and AI insights in parallel
+    const monthSelect = document.getElementById('dashboardMonthSelect');
+    const monthToFetch = selectedMonth !== null ? selectedMonth : (monthSelect ? monthSelect.value : null);
+
     const [summaryData, transactionsData, insightsData] = await Promise.all([
-      apiGetSummary(),
-      apiGetTransactions(),
+      apiGetSummary(monthToFetch && monthToFetch !== 'all' ? monthToFetch : null),
+      apiGetTransactions(monthToFetch && monthToFetch !== 'all' ? { month: monthToFetch } : {}),
       apiGetInsights().catch(() => null)
     ]);
 
+    populateDashboardMonthDropdown(summaryData.availableMonths, summaryData.selectedMonth || monthToFetch);
     renderSummaryCards(summaryData);
     renderCategoryChart(summaryData.categoryBreakdown);
     renderMonthlyChart(summaryData.monthlyData);
@@ -37,6 +90,22 @@ async function loadDashboard() {
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+function populateDashboardMonthDropdown(availableMonths, selectedMonth) {
+  const monthSelect = document.getElementById('dashboardMonthSelect');
+  if (!monthSelect || !availableMonths || availableMonths.length === 0) return;
+
+  const currentValue = selectedMonth || monthSelect.value || 'all';
+  monthSelect.innerHTML = '<option value="all">All Time / Combined</option>';
+
+  availableMonths.forEach(m => {
+    const label = formatMonthYear(m);
+    const isSelected = m === currentValue ? 'selected' : '';
+    monthSelect.insertAdjacentHTML('beforeend',
+      `<option value="${m}" ${isSelected}>${label}</option>`
+    );
+  });
 }
 
 // ─── Summary Cards ──────────────────────────────────────────
@@ -69,7 +138,10 @@ function renderCategoryChart(breakdown) {
     return;
   }
 
-  const ctx = document.getElementById('categoryChart').getContext('2d');
+  const canvas = document.getElementById('categoryChart');
+  canvas.style.display = 'block';
+  document.getElementById('pieEmpty').classList.add('hidden');
+  const ctx = canvas.getContext('2d');
 
   if (myCategoryChart && typeof myCategoryChart.destroy === 'function') {
     myCategoryChart.destroy();
@@ -94,7 +166,7 @@ function renderCategoryChart(breakdown) {
         legend: {
           position: 'bottom',
           labels: {
-            color: 'hsl(220, 15%, 60%)',
+            color: '#475569',
             padding: 16,
             font: { family: 'Inter', size: 12 },
             usePointStyle: true,
@@ -102,10 +174,10 @@ function renderCategoryChart(breakdown) {
           }
         },
         tooltip: {
-          backgroundColor: 'hsl(230, 22%, 11%)',
+          backgroundColor: '#0F172A',
           titleFont: { family: 'Inter', weight: '600' },
           bodyFont: { family: 'Inter' },
-          borderColor: 'rgba(255,255,255,0.1)',
+          borderColor: 'rgba(226, 232, 240, 0.2)',
           borderWidth: 1,
           cornerRadius: 8,
           padding: 12,
@@ -130,11 +202,15 @@ function renderMonthlyChart(monthlyData) {
     return;
   }
 
+  const canvas = document.getElementById('monthlyChart');
+  canvas.style.display = 'block';
+  document.getElementById('barEmpty').classList.add('hidden');
+
   const labels = monthlyData.map(m => formatMonthYear(m.month));
   const incomeData = monthlyData.map(m => m.income);
   const expenseData = monthlyData.map(m => m.expense);
 
-  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  const ctx = canvas.getContext('2d');
 
   if (myMonthlyChart && typeof myMonthlyChart.destroy === 'function') {
     myMonthlyChart.destroy();
@@ -148,8 +224,8 @@ function renderMonthlyChart(monthlyData) {
         {
           label: 'Income',
           data: incomeData,
-          backgroundColor: 'hsla(160, 84%, 50%, 0.7)',
-          borderColor: 'hsl(160, 84%, 50%)',
+          backgroundColor: 'rgba(0, 201, 167, 0.8)',
+          borderColor: '#00C9A7',
           borderWidth: 1,
           borderRadius: 6,
           borderSkipped: false
@@ -157,8 +233,8 @@ function renderMonthlyChart(monthlyData) {
         {
           label: 'Expenses',
           data: expenseData,
-          backgroundColor: 'hsla(0, 85%, 62%, 0.7)',
-          borderColor: 'hsl(0, 85%, 62%)',
+          backgroundColor: 'rgba(244, 63, 94, 0.8)',
+          borderColor: '#F43F5E',
           borderWidth: 1,
           borderRadius: 6,
           borderSkipped: false
@@ -173,18 +249,18 @@ function renderMonthlyChart(monthlyData) {
         x: {
           grid: { display: false },
           ticks: {
-            color: 'hsl(220, 15%, 55%)',
+            color: '#64748B',
             font: { family: 'Inter', size: 11 }
           }
         },
         y: {
           beginAtZero: true,
           grid: {
-            color: 'rgba(255,255,255,0.05)',
+            color: 'rgba(15, 23, 42, 0.06)',
             drawBorder: false
           },
           ticks: {
-            color: 'hsl(220, 15%, 55%)',
+            color: '#64748B',
             font: { family: 'Inter', size: 11 },
             callback: function(value) {
               if (value >= 100000) return '₹' + (value / 100000).toFixed(1) + 'L';
@@ -199,7 +275,7 @@ function renderMonthlyChart(monthlyData) {
           position: 'top',
           align: 'end',
           labels: {
-            color: 'hsl(220, 15%, 60%)',
+            color: '#475569',
             font: { family: 'Inter', size: 12 },
             usePointStyle: true,
             pointStyleWidth: 8,
@@ -207,10 +283,10 @@ function renderMonthlyChart(monthlyData) {
           }
         },
         tooltip: {
-          backgroundColor: 'hsl(230, 22%, 11%)',
+          backgroundColor: '#0F172A',
           titleFont: { family: 'Inter', weight: '600' },
           bodyFont: { family: 'Inter' },
-          borderColor: 'rgba(255,255,255,0.1)',
+          borderColor: 'rgba(226, 232, 240, 0.2)',
           borderWidth: 1,
           cornerRadius: 8,
           padding: 12,
@@ -258,14 +334,14 @@ function renderDailyTrendChart(dailyData) {
       datasets: [{
         label: 'Daily Expense',
         data: values,
-        borderColor: 'hsl(0, 85%, 62%)',
-        backgroundColor: 'hsla(0, 85%, 62%, 0.12)',
+        borderColor: '#F43F5E',
+        backgroundColor: 'rgba(244, 63, 94, 0.12)',
         borderWidth: 2,
         fill: true,
         tension: 0.35,
         pointRadius: 3,
         pointHoverRadius: 6,
-        pointBackgroundColor: 'hsl(0, 85%, 62%)'
+        pointBackgroundColor: '#F43F5E'
       }]
     },
     options: {
@@ -276,16 +352,16 @@ function renderDailyTrendChart(dailyData) {
         x: {
           grid: { display: false },
           ticks: {
-            color: 'hsl(220, 15%, 55%)',
+            color: '#64748B',
             font: { family: 'Inter', size: 10 },
             maxTicksLimit: 10
           }
         },
         y: {
           beginAtZero: true,
-          grid: { color: 'rgba(255,255,255,0.05)' },
+          grid: { color: 'rgba(15, 23, 42, 0.06)' },
           ticks: {
-            color: 'hsl(220, 15%, 55%)',
+            color: '#64748B',
             font: { family: 'Inter', size: 10 },
             callback: function(val) {
               return '₹' + val;
@@ -296,10 +372,10 @@ function renderDailyTrendChart(dailyData) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'hsl(230, 22%, 11%)',
+          backgroundColor: '#0F172A',
           titleFont: { family: 'Inter', weight: '600' },
           bodyFont: { family: 'Inter' },
-          borderColor: 'rgba(255,255,255,0.1)',
+          borderColor: 'rgba(226, 232, 240, 0.2)',
           borderWidth: 1,
           cornerRadius: 8,
           padding: 10,
@@ -344,11 +420,11 @@ function renderIncomeBreakdownChart(breakdown) {
       datasets: [{
         data: values,
         backgroundColor: [
-          'hsl(160, 84%, 50%)',
-          'hsl(220, 90%, 65%)',
-          'hsl(270, 76%, 65%)',
-          'hsl(45, 100%, 55%)',
-          'hsl(190, 80%, 50%)'
+          '#00C9A7',
+          '#6366F1',
+          '#8B5CF6',
+          '#F97316',
+          '#06B6D4'
         ],
         borderWidth: 0
       }]
@@ -360,7 +436,7 @@ function renderIncomeBreakdownChart(breakdown) {
         legend: {
           position: 'bottom',
           labels: {
-            color: 'hsl(220, 15%, 60%)',
+            color: '#475569',
             padding: 14,
             font: { family: 'Inter', size: 11 },
             usePointStyle: true,
@@ -368,10 +444,10 @@ function renderIncomeBreakdownChart(breakdown) {
           }
         },
         tooltip: {
-          backgroundColor: 'hsl(230, 22%, 11%)',
+          backgroundColor: '#0F172A',
           titleFont: { family: 'Inter', weight: '600' },
           bodyFont: { family: 'Inter' },
-          borderColor: 'rgba(255,255,255,0.1)',
+          borderColor: 'rgba(226, 232, 240, 0.2)',
           borderWidth: 1,
           cornerRadius: 8,
           padding: 10,
@@ -395,7 +471,7 @@ function renderRecentTransactions(transactions) {
   if (transactions.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" class="text-center text-muted" style="padding:32px">
+        <td colspan="6" class="text-center text-muted" style="padding:32px">
           No transactions yet. <a href="/transactions.html">Add your first one</a>
         </td>
       </tr>
@@ -404,7 +480,7 @@ function renderRecentTransactions(transactions) {
   }
 
   tbody.innerHTML = transactions.map(t => `
-    <tr>
+    <tr data-id="${t.id}">
       <td>${formatDate(t.date)}</td>
       <td><span class="badge badge-${t.type}">${t.type}</span></td>
       <td>${getCategoryIcon(t.category)} ${t.category}</td>
@@ -414,8 +490,110 @@ function renderRecentTransactions(transactions) {
           ${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}
         </span>
       </td>
+      <td style="text-align:center">
+        <div class="table-actions" style="justify-content:center">
+          <button class="btn-icon edit" title="Edit" onclick="handleDashboardEdit('${t.id}')">✏️</button>
+          <button class="btn-icon delete" title="Delete" onclick="handleDashboardDelete('${t.id}')">🗑️</button>
+        </div>
+      </td>
     </tr>
   `).join('');
+}
+
+async function handleDashboardEdit(id) {
+  try {
+    const data = await apiGetTransactions();
+    const txn = data.transactions.find(t => t.id === id);
+    if (!txn) {
+      showToast('Transaction not found.', 'error');
+      return;
+    }
+
+    document.getElementById('txnId').value = txn.id;
+    document.getElementById('txnAmount').value = txn.amount;
+    document.getElementById('txnDate').value = txn.date;
+    document.getElementById('txnCategory').value = txn.category;
+    document.getElementById('txnNote').value = txn.note || '';
+    document.getElementById('txnError').style.display = 'none';
+
+    if (txn.type === 'income') {
+      document.getElementById('typeIncome').checked = true;
+    } else {
+      document.getElementById('typeExpense').checked = true;
+    }
+
+    document.getElementById('modalTitle').textContent = 'Edit Transaction';
+    document.getElementById('btnSaveTxn').textContent = 'Update Transaction';
+    openModal('transactionModal');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function handleDashboardDelete(id) {
+  showConfirm('Are you sure you want to delete this transaction? This cannot be undone.', async () => {
+    try {
+      await apiDeleteTransaction(id);
+      showToast('Transaction deleted.', 'success');
+      loadDashboard();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+}
+
+async function handleDashboardSave() {
+  const errorEl = document.getElementById('txnError');
+  const btn = document.getElementById('btnSaveTxn');
+  const idEl = document.getElementById('txnId');
+  const id = idEl ? idEl.value : '';
+  const typeEl = document.querySelector('input[name="txnType"]:checked');
+  const type = typeEl ? typeEl.value : 'expense';
+  const amount = document.getElementById('txnAmount').value;
+  const category = document.getElementById('txnCategory').value;
+  const date = document.getElementById('txnDate').value;
+  const note = document.getElementById('txnNote').value.trim();
+
+  if (!amount || Number(amount) <= 0) {
+    errorEl.textContent = 'Please enter a valid amount.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  if (!category) {
+    errorEl.textContent = 'Please select a category.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  if (!date) {
+    errorEl.textContent = 'Please select a date.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const payload = { type, amount: Number(amount), category, date, note };
+
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    errorEl.style.display = 'none';
+
+    if (id) {
+      await apiUpdateTransaction(id, payload);
+      showToast('Transaction updated!', 'success');
+    } else {
+      await apiCreateTransaction(payload);
+      showToast('Transaction added!', 'success');
+    }
+
+    closeModal('transactionModal');
+    loadDashboard();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = id ? 'Update Transaction' : 'Save Transaction';
+  }
 }
 
 // ─── AI Financial Insights & Health Score Widget ─────────────

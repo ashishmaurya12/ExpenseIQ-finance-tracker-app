@@ -31,8 +31,9 @@ async function findByUserId(userId, filters = {}) {
     const query = { userId };
     if (filters.type) query.type = filters.type;
     if (filters.category) query.category = filters.category;
+    if (filters.month) query.date = { $regex: `^${filters.month}` };
     if (filters.from || filters.to) {
-      query.date = {};
+      query.date = query.date || {};
       if (filters.from) query.date.$gte = filters.from;
       if (filters.to) query.date.$lte = filters.to;
     }
@@ -49,6 +50,7 @@ async function findByUserId(userId, filters = {}) {
 
   if (filters.type) transactions = transactions.filter(t => t.type === filters.type);
   if (filters.category) transactions = transactions.filter(t => t.category === filters.category);
+  if (filters.month) transactions = transactions.filter(t => t.date && t.date.startsWith(filters.month));
   if (filters.from) transactions = transactions.filter(t => t.date >= filters.from);
   if (filters.to) transactions = transactions.filter(t => t.date <= filters.to);
 
@@ -164,10 +166,20 @@ async function remove(id, userId) {
 }
 
 /**
- * Get summary data for dashboard charts.
+ * Get summary data for dashboard charts with optional month filter.
  */
-async function getSummary(userId) {
+async function getSummary(userId, targetMonth = null) {
   const transactions = await findByUserId(userId);
+
+  // Collect available unique months
+  const monthSet = new Set();
+  transactions.forEach(t => {
+    const m = getMonthFromDate(t.date);
+    if (m) monthSet.add(m);
+  });
+  const currentM = getCurrentMonth();
+  monthSet.add(currentM);
+  const availableMonths = Array.from(monthSet).sort().reverse();
 
   let totalIncome = 0;
   let totalExpense = 0;
@@ -176,41 +188,57 @@ async function getSummary(userId) {
   const monthlyData = {};
   const dailyMap = {};
 
-  // Initialize last 30 days with 0
-  const today = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split('T')[0];
-    dailyMap[dateStr] = 0;
+  // Build dailyMap range
+  if (targetMonth && targetMonth !== 'all') {
+    const [yearStr, monthStr] = targetMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const monthIdx = parseInt(monthStr, 10) - 1;
+    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dStr = `${targetMonth}-${String(day).padStart(2, '0')}`;
+      dailyMap[dStr] = 0;
+    }
+  } else {
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      dailyMap[dateStr] = 0;
+    }
   }
 
   transactions.forEach(t => {
-    const amount = Number(t.amount) || 0;
-    const cat = (t.category || 'Other').trim();
-
-    if (t.type === 'income') {
-      totalIncome += amount;
-      incomeBreakdown[cat] = (incomeBreakdown[cat] || 0) + amount;
-    } else {
-      totalExpense += amount;
-      categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + amount;
-
-      // Add to daily if within last 30 days
-      if (t.date && dailyMap[t.date] !== undefined) {
-        dailyMap[t.date] += amount;
-      }
-    }
-
     const month = getMonthFromDate(t.date);
+
+    // Global monthly aggregate data
     if (month) {
       if (!monthlyData[month]) {
         monthlyData[month] = { month, income: 0, expense: 0 };
       }
+      const amt = Number(t.amount) || 0;
       if (t.type === 'income') {
-        monthlyData[month].income += amount;
+        monthlyData[month].income += amt;
       } else {
-        monthlyData[month].expense += amount;
+        monthlyData[month].expense += amt;
+      }
+    }
+
+    // Filter calculations for requested target month (or all)
+    if (!targetMonth || targetMonth === 'all' || (t.date && t.date.startsWith(targetMonth))) {
+      const amount = Number(t.amount) || 0;
+      const cat = (t.category || 'Other').trim();
+
+      if (t.type === 'income') {
+        totalIncome += amount;
+        incomeBreakdown[cat] = (incomeBreakdown[cat] || 0) + amount;
+      } else {
+        totalExpense += amount;
+        categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + amount;
+
+        if (t.date && dailyMap[t.date] !== undefined) {
+          dailyMap[t.date] += amount;
+        }
       }
     }
   });
@@ -231,34 +259,49 @@ async function getSummary(userId) {
     categoryBreakdown,
     incomeBreakdown,
     monthlyData: sortedMonthly,
-    dailyData
+    dailyData,
+    availableMonths,
+    selectedMonth: targetMonth || 'all'
   };
 }
 
 /**
- * Get total expenses for a user in the current month, grouped by category.
+ * Get total expenses for a user in a target month (defaults to current month), grouped by category.
  */
-async function getCurrentMonthExpensesByCategory(userId) {
-  const currentMonth = getCurrentMonth();
-  const transactions = await findByUserId(userId);
+async function getCurrentMonthExpensesByCategory(userId, targetMonth = null) {
+  const monthToUse = targetMonth || getCurrentMonth();
+  const transactions = await findByUserId(userId, { month: monthToUse });
 
   const byCategory = {};
   transactions.forEach(t => {
     if (t.type && t.type.toLowerCase() === 'expense') {
-      const tMonth = getMonthFromDate(t.date);
-      if (tMonth === currentMonth) {
-        const cat = (t.category || '').trim();
-        if (cat) {
-          if (!byCategory[cat]) {
-            byCategory[cat] = 0;
-          }
-          byCategory[cat] += Number(t.amount) || 0;
+      const cat = (t.category || '').trim();
+      if (cat) {
+        if (!byCategory[cat]) {
+          byCategory[cat] = 0;
         }
+        byCategory[cat] += Number(t.amount) || 0;
       }
     }
   });
 
   return byCategory;
+}
+
+/**
+ * Remove all transactions for a specific user (Reset data).
+ */
+async function removeAllByUserId(userId) {
+  if (isMongoConnected()) {
+    const result = await TransactionModel.deleteMany({ userId });
+    return result.deletedCount;
+  }
+
+  const transactions = readData(FILE);
+  const remaining = transactions.filter(t => t.userId !== userId);
+  const removedCount = transactions.length - remaining.length;
+  writeData(FILE, remaining);
+  return removedCount;
 }
 
 module.exports = {
@@ -268,6 +311,7 @@ module.exports = {
   create,
   update,
   remove,
+  removeAllByUserId,
   getSummary,
   getCurrentMonthExpensesByCategory
 };

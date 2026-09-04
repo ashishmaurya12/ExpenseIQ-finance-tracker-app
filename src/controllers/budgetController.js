@@ -5,7 +5,8 @@ const Budget = require('../models/Budget');
  */
 async function getAll(req, res, next) {
   try {
-    const budgets = await Budget.getWithSpending(req.user.id);
+    const month = req.query.month || null;
+    const budgets = await Budget.getWithSpending(req.user.id, month);
     const totalBudget = budgets.reduce((sum, b) => sum + (Number(b.monthlyLimit) || 0), 0);
     const totalSpent = budgets.reduce((sum, b) => sum + (Number(b.spent) || 0), 0);
     const totalRemaining = Math.max(0, totalBudget - totalSpent);

@@ -13,8 +13,17 @@ document.addEventListener('DOMContentLoaded', () => {
   loadBudgets();
 });
 
+let availableBudgetMonthsLoaded = false;
+
 // ─── Event Listeners ────────────────────────────────────────
 function attachBudgetListeners() {
+  const monthSelect = document.getElementById('budgetMonthSelect');
+  if (monthSelect) {
+    monthSelect.addEventListener('change', () => {
+      loadBudgets(monthSelect.value);
+    });
+  }
+
   document.getElementById('btnAddBudget').addEventListener('click', () => {
     resetBudgetForm();
     populateBudgetCategories();
@@ -67,16 +76,44 @@ function populateBudgetCategories(excludeCategory) {
 }
 
 // ─── Load & Render Budgets ──────────────────────────────────
-async function loadBudgets() {
+async function loadBudgets(selectedMonth = null) {
+  const monthSelect = document.getElementById('budgetMonthSelect');
+  const monthToFetch = selectedMonth !== null ? selectedMonth : (monthSelect ? monthSelect.value : null);
+
   try {
-    const data = await apiGetBudgets();
+    const data = await apiGetBudgets(monthToFetch || null);
     allBudgets = data.budgets || [];
     renderBudgets(allBudgets);
     renderBudgetSummary(allBudgets, data.totalBudget, data.totalSpent);
     renderBudgetChart(allBudgets);
+
+    if (!availableBudgetMonthsLoaded) {
+      apiGetSummary().then(summary => {
+        if (summary && summary.availableMonths) {
+          populateBudgetMonthDropdown(summary.availableMonths, monthToFetch);
+          availableBudgetMonthsLoaded = true;
+        }
+      }).catch(() => {});
+    }
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+function populateBudgetMonthDropdown(availableMonths, selectedMonth) {
+  const monthSelect = document.getElementById('budgetMonthSelect');
+  if (!monthSelect || !availableMonths) return;
+
+  const currentVal = selectedMonth || monthSelect.value || '';
+  monthSelect.innerHTML = '<option value="">Current Month</option>';
+
+  availableMonths.forEach(m => {
+    const label = formatMonthYear(m);
+    const isSelected = m === currentVal ? 'selected' : '';
+    monthSelect.insertAdjacentHTML('beforeend',
+      `<option value="${m}" ${isSelected}>${label}</option>`
+    );
+  });
 }
 
 function renderBudgets(budgets) {

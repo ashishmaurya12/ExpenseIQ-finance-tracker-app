@@ -34,6 +34,81 @@ function getTodayISO() {
   return new Date().toISOString().split('T')[0];
 }
 
+// ─── Export Utilities ───────────────────────────────────────
+function exportToCSV(data, filename = 'expenseiq_report.csv') {
+  if (!data || data.length === 0) return;
+  const headers = ['Date', 'Type', 'Category', 'Note', 'Amount'];
+  const rows = data.map(t => [
+    `"${t.date || ''}"`,
+    `"${t.type || ''}"`,
+    `"${t.category || ''}"`,
+    `"${(t.note || '').replace(/"/g, '""')}"`,
+    t.amount || 0
+  ]);
+  const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement('a');
+  link.setAttribute('href', encodedUri);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function exportToPDF(data, title = 'ExpenseIQ Financial Report') {
+  if (!data || data.length === 0) return;
+  const printWindow = window.open('', '_blank');
+  const user = typeof getUser === 'function' ? getUser() : null;
+  const rowsHtml = data.map(t => `
+    <tr>
+      <td>${t.date || ''}</td>
+      <td style="text-transform:capitalize">${t.type || ''}</td>
+      <td>${t.category || ''}</td>
+      <td>${t.note || '—'}</td>
+      <td style="text-align:right;font-weight:600">${formatCurrency(t.amount || 0)}</td>
+    </tr>
+  `).join('');
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${title}</title>
+      <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; padding: 32px; color: #0F172A; }
+        h1 { margin-bottom: 4px; color: #00C9A7; }
+        p { color: #64748B; margin-bottom: 24px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { padding: 10px 14px; border-bottom: 1px solid #E2E8F0; text-align: left; font-size: 13px; }
+        th { background: #F8FAFC; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; color: #475569; }
+      </style>
+    </head>
+    <body>
+      <h1>${title}</h1>
+      <p>Generated for ${user ? user.name : 'ExpenseIQ User'} on ${formatDate(getTodayISO())}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th style="text-align:right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+      <script>
+        window.onload = function() { window.print(); }
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
 // ─── Toast Notifications ────────────────────────────────────
 function showToast(message, type = 'success') {
   let container = document.querySelector('.toast-container');
@@ -200,21 +275,21 @@ const CATEGORIES = [
   'Investment', 'Gift', 'Other'
 ];
 
-// ─── Chart.js Color Palette ─────────────────────────────────
+// ─── Chart.js Color Palette (Enhancv Palette) ───────────────
 const CHART_COLORS = [
-  'hsl(160, 84%, 50%)',   // Emerald
-  'hsl(220, 90%, 65%)',   // Blue
-  'hsl(0, 85%, 62%)',     // Coral
-  'hsl(270, 76%, 65%)',   // Purple
-  'hsl(28, 95%, 60%)',    // Orange
-  'hsl(45, 100%, 55%)',   // Yellow
-  'hsl(340, 80%, 55%)',   // Pink
-  'hsl(190, 80%, 50%)',   // Cyan
-  'hsl(120, 50%, 50%)',   // Green
-  'hsl(200, 70%, 55%)',   // Sky
-  'hsl(300, 60%, 55%)',   // Magenta
-  'hsl(60, 80%, 50%)',    // Lime
-  'hsl(15, 85%, 55%)',    // Vermillion
+  '#00C9A7',   // Mint Teal (Enhancv Primary)
+  '#6366F1',   // Royal Indigo
+  '#8B5CF6',   // Lavender Purple
+  '#F43F5E',   // Coral Rose
+  '#F97316',   // Warm Orange
+  '#F59E0B',   // Amber
+  '#06B6D4',   // Cyan
+  '#10B981',   // Emerald
+  '#3B82F6',   // Blue
+  '#EC4899',   // Pink
+  '#84CC16',   // Lime
+  '#14B8A6',   // Teal
+  '#64748B',   // Slate
 ];
 
 // ─── Chart.js Percentage Bar Plugin ─────────────────────────

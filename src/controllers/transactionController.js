@@ -5,8 +5,8 @@ const Transaction = require('../models/Transaction');
  */
 async function getAll(req, res, next) {
   try {
-    const { type, category, from, to } = req.query;
-    const transactions = await Transaction.findByUserId(req.user.id, { type, category, from, to });
+    const { type, category, month, from, to } = req.query;
+    const transactions = await Transaction.findByUserId(req.user.id, { type, category, month, from, to });
 
     res.json({
       success: true,
@@ -92,15 +92,32 @@ async function remove(req, res, next) {
 }
 
 /**
+ * DELETE /api/transactions/meta/clear-all
+ */
+async function removeAll(req, res, next) {
+  try {
+    const count = await Transaction.removeAllByUserId(req.user.id);
+    res.json({
+      success: true,
+      message: `Successfully cleared all ${count} transaction records.`,
+      count
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/transactions/meta/summary
  */
 async function getSummary(req, res, next) {
   try {
-    const summary = await Transaction.getSummary(req.user.id);
+    const month = req.query.month || null;
+    const summary = await Transaction.getSummary(req.user.id, month);
     res.json({ success: true, ...summary });
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { getAll, create, update, remove, getSummary };
+module.exports = { getAll, create, update, remove, removeAll, getSummary };

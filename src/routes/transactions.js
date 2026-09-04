@@ -10,6 +10,9 @@ router.use(auth);
 // GET /api/transactions/meta/summary  (must be before /:id routes)
 router.get('/meta/summary', transactionController.getSummary);
 
+// DELETE /api/transactions/meta/clear-all (must be before /:id routes)
+router.delete('/meta/clear-all', transactionController.removeAll);
+
 // GET /api/transactions
 router.get('/', transactionController.getAll);
 

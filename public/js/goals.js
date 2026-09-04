@@ -283,6 +283,9 @@ async function handleFundGoal() {
     const result = await apiFundGoal(id, Number(amount));
     showToast(result.message, 'success');
 
+    // Trigger celebration confetti animation
+    triggerConfetti();
+
     closeModal('fundModal');
     loadGoals();
   } catch (err) {
@@ -292,6 +295,64 @@ async function handleFundGoal() {
     btn.disabled = false;
     btn.textContent = '💰 Add Funds';
   }
+}
+
+// ─── Confetti Celebration ───────────────────────────────────
+function triggerConfetti() {
+  let canvas = document.getElementById('confettiCanvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'confettiCanvas';
+    document.body.appendChild(canvas);
+  }
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const particles = [];
+  const colors = ['#00C9A7', '#6366F1', '#8B5CF6', '#F43F5E', '#F97316', '#F59E0B'];
+
+  for (let i = 0; i < 90; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * (canvas.height / 2),
+      r: Math.random() * 6 + 4,
+      d: Math.random() * 80,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      tilt: Math.floor(Math.random() * 10) - 10,
+      tiltAngleIncremental: Math.random() * 0.07 + 0.05,
+      tiltAngle: 0
+    });
+  }
+
+  let animationFrame;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.tiltAngle += p.tiltAngleIncremental;
+      p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+      p.tilt = Math.sin(p.tiltAngle) * 15;
+
+      ctx.beginPath();
+      ctx.lineWidth = p.r;
+      ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+      ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+      ctx.stroke();
+    });
+
+    if (particles.some(p => p.y < canvas.height)) {
+      animationFrame = requestAnimationFrame(draw);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  draw();
+  setTimeout(() => {
+    cancelAnimationFrame(animationFrame);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, 3500);
 }
 
 // ─── Edit Goal ──────────────────────────────────────────────

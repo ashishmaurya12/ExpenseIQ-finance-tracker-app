@@ -108,6 +108,7 @@ async function apiGetTransactions(filters = {}) {
   const params = new URLSearchParams();
   if (filters.type) params.set('type', filters.type);
   if (filters.category) params.set('category', filters.category);
+  if (filters.month) params.set('month', filters.month);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
 
@@ -135,13 +136,19 @@ async function apiDeleteTransaction(id) {
   });
 }
 
-async function apiGetSummary() {
-  return apiFetch('/transactions/meta/summary');
+async function apiClearAllTransactions() {
+  return apiFetch('/transactions/meta/clear-all', {
+    method: 'DELETE'
+  });
+}
+
+async function apiGetSummary(month = null) {
+  return apiFetch(`/transactions/meta/summary${month ? '?month=' + month : ''}`);
 }
 
 // ─── Budgets API ────────────────────────────────────────────
-async function apiGetBudgets() {
-  return apiFetch('/budgets');
+async function apiGetBudgets(month = null) {
+  return apiFetch(`/budgets${month ? '?month=' + month : ''}`);
 }
 
 async function apiCreateBudget(data) {

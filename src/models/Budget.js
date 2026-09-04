@@ -150,11 +150,11 @@ async function remove(id, userId) {
 }
 
 /**
- * Get all budgets with current-month spending data attached.
+ * Get all budgets with spending data attached for a target month (or current month).
  */
-async function getWithSpending(userId) {
+async function getWithSpending(userId, targetMonth = null) {
   const budgets = await findByUserId(userId);
-  const currentSpending = await Transaction.getCurrentMonthExpensesByCategory(userId);
+  const currentSpending = await Transaction.getCurrentMonthExpensesByCategory(userId, targetMonth);
 
   const spendingNormalized = {};
   Object.keys(currentSpending).forEach(cat => {

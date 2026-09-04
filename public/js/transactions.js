@@ -10,7 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
   setDefaultDate();
   attachEventListeners();
   loadTransactions();
+
+  // Check URL query parameters for action=add
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('action') === 'add' || urlParams.has('add')) {
+    const type = urlParams.get('type') || 'income';
+    window.openAddTransactionModal(type);
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 });
+
+// ─── Global Quick Add Trigger ────────────────────────────────
+window.openAddTransactionModal = function(defaultType = 'income') {
+  resetForm(defaultType);
+  const isIncome = defaultType === 'income';
+  document.getElementById('modalTitle').textContent = isIncome ? 'Add Income' : 'Add Transaction';
+  document.getElementById('btnSaveTxn').textContent = 'Save Transaction';
+  openModal('transactionModal');
+};
 
 // ─── Populate Category Dropdowns ────────────────────────────
 function populateCategoryDropdowns() {
@@ -35,19 +52,25 @@ function setDefaultDate() {
 function attachEventListeners() {
   // Add button → open modal
   document.getElementById('btnAddTransaction').addEventListener('click', () => {
-    resetForm();
-    document.getElementById('modalTitle').textContent = 'Add Transaction';
-    document.getElementById('btnSaveTxn').textContent = 'Save Transaction';
-    openModal('transactionModal');
+    window.openAddTransactionModal('expense');
   });
 
   // Close modal
-  document.getElementById('modalClose').addEventListener('click', () => closeModal('transactionModal'));
-  document.getElementById('btnCancelTxn').addEventListener('click', () => closeModal('transactionModal'));
+  document.getElementById('modalClose').addEventListener('click', () => {
+    closeModal('transactionModal');
+    resetForm();
+  });
+  document.getElementById('btnCancelTxn').addEventListener('click', () => {
+    closeModal('transactionModal');
+    resetForm();
+  });
 
   // Click outside modal to close
   document.getElementById('transactionModal').addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal-overlay')) closeModal('transactionModal');
+    if (e.target.classList.contains('modal-overlay')) {
+      closeModal('transactionModal');
+      resetForm();
+    }
   });
 
   // Save
@@ -61,15 +84,18 @@ function attachEventListeners() {
 
   // Filters
   const filterHandler = debounce(loadTransactions, 400);
+  const filterMonthEl = document.getElementById('filterMonth');
+  if (filterMonthEl) filterMonthEl.addEventListener('change', filterHandler);
   document.getElementById('filterType').addEventListener('change', filterHandler);
   document.getElementById('filterCategory').addEventListener('change', filterHandler);
   document.getElementById('filterFrom').addEventListener('change', filterHandler);
   document.getElementById('filterTo').addEventListener('change', filterHandler);
 
   // Export CSV
-  document.getElementById('btnExportCSV').addEventListener('click', async () => {
+  document.getElementById('btnExportCSV')?.addEventListener('click', async () => {
     try {
       const filters = {
+        month: document.getElementById('filterMonth')?.value || '',
         type: document.getElementById('filterType').value,
         category: document.getElementById('filterCategory').value,
         from: document.getElementById('filterFrom').value,
@@ -87,8 +113,31 @@ function attachEventListeners() {
     }
   });
 
+  // Export PDF
+  document.getElementById('btnExportPDF')?.addEventListener('click', async () => {
+    try {
+      const filters = {
+        month: document.getElementById('filterMonth')?.value || '',
+        type: document.getElementById('filterType').value,
+        category: document.getElementById('filterCategory').value,
+        from: document.getElementById('filterFrom').value,
+        to: document.getElementById('filterTo').value
+      };
+      const data = await apiGetTransactions(filters);
+      if (!data.transactions || data.transactions.length === 0) {
+        showToast('No transactions to print.', 'info');
+        return;
+      }
+      exportToPDF(data.transactions, 'ExpenseIQ Transactions Report');
+    } catch (err) {
+      showToast('Failed to export PDF: ' + err.message, 'error');
+    }
+  });
+
   // Clear filters
   document.getElementById('btnClearFilters').addEventListener('click', () => {
+    const filterMonth = document.getElementById('filterMonth');
+    if (filterMonth) filterMonth.value = '';
     document.getElementById('filterType').value = '';
     document.getElementById('filterCategory').value = '';
     document.getElementById('filterFrom').value = '';
@@ -98,10 +147,13 @@ function attachEventListeners() {
 }
 
 let myTxnChart = null;
+let availableMonthsLoaded = false;
 
 // ─── Load & Render Transactions ─────────────────────────────
 async function loadTransactions() {
+  const monthVal = document.getElementById('filterMonth')?.value || '';
   const filters = {
+    month: monthVal,
     type: document.getElementById('filterType').value,
     category: document.getElementById('filterCategory').value,
     from: document.getElementById('filterFrom').value,
@@ -114,9 +166,35 @@ async function loadTransactions() {
     renderTxnChart(data.transactions);
     document.getElementById('transactionCount').textContent =
       `${data.count} transaction${data.count !== 1 ? 's' : ''} found`;
+
+    // Populate available months if not yet populated
+    if (!availableMonthsLoaded) {
+      apiGetSummary().then(summary => {
+        if (summary && summary.availableMonths) {
+          populateTxnMonthDropdown(summary.availableMonths, monthVal);
+          availableMonthsLoaded = true;
+        }
+      }).catch(() => {});
+    }
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+function populateTxnMonthDropdown(availableMonths, selectedMonth) {
+  const monthSelect = document.getElementById('filterMonth');
+  if (!monthSelect || !availableMonths) return;
+
+  const currentVal = selectedMonth || monthSelect.value || '';
+  monthSelect.innerHTML = '<option value="">All Months</option>';
+
+  availableMonths.forEach(m => {
+    const label = formatMonthYear(m);
+    const isSelected = m === currentVal ? 'selected' : '';
+    monthSelect.insertAdjacentHTML('beforeend',
+      `<option value="${m}" ${isSelected}>${label}</option>`
+    );
+  });
 }
 
 function renderTxnChart(transactions) {
@@ -154,23 +232,31 @@ function renderTxnChart(transactions) {
         label: 'Total Amount (₹)',
         data: values,
         backgroundColor: CHART_COLORS.slice(0, categories.length),
-        borderRadius: 6
+        borderRadius: 8,
+        barPercentage: 0.6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { grid: { display: false }, ticks: { color: 'hsl(220, 15%, 55%)' } },
+        x: { grid: { display: false }, ticks: { color: '#64748B', font: { family: 'Plus Jakarta Sans', weight: '600' } } },
         y: {
           beginAtZero: true,
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: 'hsl(220, 15%, 55%)', callback: v => '₹' + v }
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#64748B', font: { family: 'Plus Jakarta Sans' }, callback: v => '₹' + v }
         }
       },
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: '#0F172A',
+          titleFont: { family: 'Plus Jakarta Sans', weight: '700' },
+          bodyFont: { family: 'Plus Jakarta Sans' },
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          borderWidth: 1,
+          cornerRadius: 10,
+          padding: 12,
           callbacks: {
             label: ctx => {
               const total = ctx.dataset.data.reduce((a, b) => a + Number(b), 0);
@@ -226,8 +312,10 @@ function renderTable(transactions) {
 async function handleSave() {
   const errorEl = document.getElementById('txnError');
   const btn = document.getElementById('btnSaveTxn');
-  const id = document.getElementById('txnId').value;
-  const type = document.querySelector('input[name="txnType"]:checked').value;
+  const idEl = document.getElementById('txnId');
+  const id = idEl ? idEl.value : '';
+  const typeEl = document.querySelector('input[name="txnType"]:checked');
+  const type = typeEl ? typeEl.value : 'expense';
   const amount = document.getElementById('txnAmount').value;
   const category = document.getElementById('txnCategory').value;
   const date = document.getElementById('txnDate').value;
@@ -266,6 +354,7 @@ async function handleSave() {
     }
 
     closeModal('transactionModal');
+    resetForm();
     loadTransactions();
   } catch (err) {
     errorEl.textContent = err.message;
@@ -322,12 +411,30 @@ function handleDelete(id) {
 }
 
 // ─── Reset Form ─────────────────────────────────────────────
-function resetForm() {
-  document.getElementById('txnId').value = '';
-  document.getElementById('txnAmount').value = '';
-  document.getElementById('txnDate').value = getTodayISO();
-  document.getElementById('txnCategory').value = CATEGORIES[0];
-  document.getElementById('txnNote').value = '';
-  document.getElementById('typeExpense').checked = true;
-  document.getElementById('txnError').style.display = 'none';
+function resetForm(defaultType = 'expense') {
+  const txnIdEl = document.getElementById('txnId');
+  if (txnIdEl) txnIdEl.value = '';
+
+  const amountEl = document.getElementById('txnAmount');
+  if (amountEl) amountEl.value = '';
+
+  const dateEl = document.getElementById('txnDate');
+  if (dateEl) dateEl.value = getTodayISO();
+
+  const catEl = document.getElementById('txnCategory');
+  if (catEl && CATEGORIES && CATEGORIES.length > 0) catEl.value = CATEGORIES[0];
+
+  const noteEl = document.getElementById('txnNote');
+  if (noteEl) noteEl.value = '';
+
+  if (defaultType === 'income') {
+    const typeInc = document.getElementById('typeIncome');
+    if (typeInc) typeInc.checked = true;
+  } else {
+    const typeExp = document.getElementById('typeExpense');
+    if (typeExp) typeExp.checked = true;
+  }
+
+  const errEl = document.getElementById('txnError');
+  if (errEl) errEl.style.display = 'none';
 }

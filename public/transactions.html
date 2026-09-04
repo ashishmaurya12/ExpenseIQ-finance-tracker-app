@@ -17,10 +17,7 @@
           <h1>Transactions</h1>
           <p class="subtitle">Manage your income and expenses</p>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-secondary" id="btnExportCSV">
-            📥 Export CSV
-          </button>
+        <div>
           <button class="btn btn-primary" id="btnAddTransaction">
             + Add Transaction
           </button>
@@ -29,6 +26,9 @@
 
       <!-- Filters -->
       <div class="filter-bar">
+        <select class="form-control" id="filterMonth">
+          <option value="">All Months</option>
+        </select>
         <select class="form-control" id="filterType">
           <option value="">All Types</option>
           <option value="income">Income</option>
@@ -108,8 +108,9 @@
               <input type="number" id="txnAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
             </div>
             <div class="form-group">
-              <label for="txnDate">Date</label>
+              <label for="txnDate">Date / Month</label>
               <input type="date" id="txnDate" class="form-control" required>
+              <span style="font-size:0.72rem;color:var(--text-muted);display:block;margin-top:2px">Select date for past/current month</span>
             </div>
           </div>
 
