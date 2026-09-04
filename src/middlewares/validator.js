@@ -123,6 +123,10 @@ function validatePasswordChange(req, res, next) {
   next();
 }
 
+const SUPPORTED_CURRENCIES = [
+  'INR', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'HKD', 'NZD', 'SEK', 'KRW', 'SGD', 'NOK', 'MXN', 'BRL', 'RUB', 'ZAR', 'TRY', 'SAR', 'AED'
+];
+
 /**
  * Validate profile update input.
  */
@@ -133,12 +137,19 @@ function validateProfileUpdate(req, res, next) {
   if (name !== undefined && (!name || name.trim().length < 2)) {
     errors.push('Name must be at least 2 characters.');
   }
-  if (currency !== undefined && (!currency || typeof currency !== 'string')) {
-    errors.push('Valid currency code is required.');
+  if (currency !== undefined) {
+    const currStr = String(currency).trim().toUpperCase();
+    if (!currStr || !/^[A-Z]{3}$/.test(currStr) || !SUPPORTED_CURRENCIES.includes(currStr)) {
+      errors.push(`Valid 3-letter currency code (e.g. ${SUPPORTED_CURRENCIES.slice(0, 5).join(', ')}) is required.`);
+    }
   }
 
   if (errors.length > 0) {
     return res.status(400).json({ success: false, message: errors.join(' ') });
+  }
+
+  if (req.body.currency) {
+    req.body.currency = req.body.currency.trim().toUpperCase();
   }
   next();
 }
@@ -148,7 +159,7 @@ function validateProfileUpdate(req, res, next) {
  */
 function validateIdParam(req, res, next) {
   const { id } = req.params;
-  if (!id || typeof id !== 'string' || id.trim() === '') {
+  if (!id || typeof id !== 'string' || id.trim() === '' || id.length > 100 || !/^[a-zA-Z0-9_\-]+$/.test(id.trim())) {
     return res.status(400).json({ success: false, message: 'Invalid ID parameter.' });
   }
   next();

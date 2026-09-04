@@ -2,14 +2,13 @@ const Transaction = require('../models/Transaction');
 const Budget = require('../models/Budget');
 const { getCurrentMonth, getMonthFromDate } = require('./helpers');
 
+const mongoose = require('mongoose');
+
 /**
  * Generate AI Financial Insights, Health Score, and Anomaly Detections for a user.
  * @param {string} userId 
  */
 async function generateInsights(userId) {
-  const transactions = await Transaction.findByUserId(userId);
-  const budgets = await Budget.getWithSpending(userId);
-
   const currentMonth = getCurrentMonth();
   
   // Calculate previous month string (YYYY-MM)
@@ -17,35 +16,96 @@ async function generateInsights(userId) {
   const prevDate = new Date(currYear, currMonthNum - 2, 1);
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
-  // Current month income & expenses
+  const budgets = await Budget.getWithSpending(userId);
+
   let currentIncome = 0;
   let currentExpense = 0;
   let prevExpense = 0;
   const currentCategoryExpenses = {};
   const categoryTxnAmounts = {};
 
-  transactions.forEach(t => {
-    const tMonth = getMonthFromDate(t.date);
-    const amount = Number(t.amount) || 0;
-    const cat = (t.category || 'Other').trim();
+  const isMongo = mongoose.connection.readyState === 1;
 
-    // Group for anomaly detection by category
-    if (t.type === 'expense') {
-      if (!categoryTxnAmounts[cat]) categoryTxnAmounts[cat] = [];
-      categoryTxnAmounts[cat].push({ ...t, amount });
-    }
-
-    if (tMonth === currentMonth) {
-      if (t.type === 'income') {
-        currentIncome += amount;
-      } else {
-        currentExpense += amount;
-        currentCategoryExpenses[cat] = (currentCategoryExpenses[cat] || 0) + amount;
+  if (isMongo && Transaction.TransactionModel) {
+    const [facetResult] = await Transaction.TransactionModel.aggregate([
+      { $match: { userId } },
+      {
+        $facet: {
+          currentMonthTotals: [
+            { $match: { date: { $regex: `^${currentMonth}` } } },
+            { $group: { _id: '$type', total: { $sum: '$amount' } } }
+          ],
+          currentMonthCategories: [
+            { $match: { type: 'expense', date: { $regex: `^${currentMonth}` } } },
+            { $group: { _id: '$category', total: { $sum: '$amount' } } }
+          ],
+          prevMonthTotals: [
+            { $match: { type: 'expense', date: { $regex: `^${prevMonth}` } } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+          ],
+          allExpensesByCategory: [
+            { $match: { type: 'expense' } },
+            { $project: { id: 1, date: 1, category: 1, amount: 1, note: 1 } }
+          ]
+        }
       }
-    } else if (tMonth === prevMonth && t.type === 'expense') {
-      prevExpense += amount;
+    ]);
+
+    if (facetResult && facetResult.currentMonthTotals) {
+      facetResult.currentMonthTotals.forEach(item => {
+        if (item._id === 'income') currentIncome = item.total;
+        if (item._id === 'expense') currentExpense = item.total;
+      });
     }
-  });
+
+    if (facetResult && facetResult.currentMonthCategories) {
+      facetResult.currentMonthCategories.forEach(item => {
+        if (item._id) currentCategoryExpenses[item._id.trim()] = item.total;
+      });
+    }
+
+    if (facetResult && facetResult.prevMonthTotals && facetResult.prevMonthTotals[0]) {
+      prevExpense = facetResult.prevMonthTotals[0].total || 0;
+    }
+
+    if (facetResult && facetResult.allExpensesByCategory) {
+      facetResult.allExpensesByCategory.forEach(t => {
+        const cat = (t.category || 'Other').trim();
+        if (!categoryTxnAmounts[cat]) categoryTxnAmounts[cat] = [];
+        categoryTxnAmounts[cat].push({
+          id: t.id,
+          date: t.date,
+          category: cat,
+          amount: Number(t.amount) || 0,
+          note: t.note || ''
+        });
+      });
+    }
+  } else {
+    const transactions = await Transaction.findByUserId(userId);
+
+    transactions.forEach(t => {
+      const tMonth = getMonthFromDate(t.date);
+      const amount = Number(t.amount) || 0;
+      const cat = (t.category || 'Other').trim();
+
+      if (t.type === 'expense') {
+        if (!categoryTxnAmounts[cat]) categoryTxnAmounts[cat] = [];
+        categoryTxnAmounts[cat].push({ ...t, amount });
+      }
+
+      if (tMonth === currentMonth) {
+        if (t.type === 'income') {
+          currentIncome += amount;
+        } else {
+          currentExpense += amount;
+          currentCategoryExpenses[cat] = (currentCategoryExpenses[cat] || 0) + amount;
+        }
+      } else if (tMonth === prevMonth && t.type === 'expense') {
+        prevExpense += amount;
+      }
+    });
+  }
 
   // 1. Savings Rate Score (0 - 40 pts)
   const netSavings = currentIncome - currentExpense;

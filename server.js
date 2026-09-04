@@ -16,13 +16,16 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || origin === FRONTEND_URL || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS request rejected: origin not allowed by policy.'));
+    if (!origin) return callback(null, true);
+    if (origin === FRONTEND_URL) return callback(null, true);
+    if (!isProduction && (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1'))) {
+      return callback(null, true);
     }
+    return callback(new Error('CORS request rejected: origin not allowed by policy.'));
   },
   credentials: true
 };

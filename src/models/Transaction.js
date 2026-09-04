@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { readData, writeData } = require('../utils/fileStore');
-const { generateId, getMonthFromDate, getCurrentMonth } = require('../utils/helpers');
+const { generateId, getMonthFromDate, getCurrentMonth, assertProductionStorage } = require('../utils/helpers');
 
 const FILE = 'transactions.json';
 
@@ -86,6 +86,7 @@ async function findByUserId(userId, filters = {}) {
     });
   }
 
+  assertProductionStorage();
   let transactions = readData(FILE).filter(t => t.userId === userId);
 
   if (filters.type) transactions = transactions.filter(t => t.type === filters.type);
@@ -162,6 +163,7 @@ async function create({ userId, type, amount, category, date, note }) {
     return obj;
   }
 
+  assertProductionStorage();
   const transactions = readData(FILE);
   transactions.push(newTxn);
   writeData(FILE, transactions);

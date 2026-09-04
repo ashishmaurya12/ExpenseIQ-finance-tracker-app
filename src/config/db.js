@@ -13,7 +13,11 @@ async function connectDB() {
     return true;
   } catch (err) {
     console.warn(`  ⚠️ MongoDB connection failed: ${err.message}`);
-    console.warn(`  ℹ️ Falling back to local JSON file storage automatically.\n`);
+    if (process.env.NODE_ENV === 'production') {
+      console.error(`  ❌ Production mode: JSON fallback disabled. Database status: DISCONNECTED.\n`);
+    } else {
+      console.warn(`  ℹ️ Development mode: Falling back to local JSON file storage automatically.\n`);
+    }
     return false;
   }
 }

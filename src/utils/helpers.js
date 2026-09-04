@@ -48,10 +48,23 @@ function getToday() {
   return new Date().toISOString().split('T')[0];
 }
 
+/**
+ * Guard against writing to JSON fallback storage in production mode if MongoDB is disconnected.
+ */
+function assertProductionStorage() {
+  const mongoose = require('mongoose');
+  if (mongoose.connection.readyState !== 1 && process.env.NODE_ENV === 'production') {
+    const err = new Error('Database service unavailable. File storage fallback disabled in production mode.');
+    err.statusCode = 503;
+    throw err;
+  }
+}
+
 module.exports = {
   generateId,
   getCurrentMonth,
   getMonthFromDate,
   isValidDate,
-  getToday
+  getToday,
+  assertProductionStorage
 };
