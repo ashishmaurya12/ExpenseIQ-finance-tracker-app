@@ -80,20 +80,34 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
     }
   });
 
-  await t.test('1. Health Endpoint Contract (GET /api/health)', async () => {
+  await t.test('1. Health Endpoint Healthy Contract (GET /api/health → 200 OK)', async () => {
     const health = await request('GET', '/health');
-    assert.ok(health.status === 200 || health.status === 503, 'Health status is 200 or 503');
-    if (health.status === 200) {
-      assert.equal(health.body.status, 'ok', 'Connected DB returns status ok');
-      assert.equal(health.body.database, 'connected');
-      assert.equal(health.body.storage, 'mongodb');
-    } else {
-      assert.equal(health.body.status, 'degraded', 'Disconnected DB returns status degraded');
-      assert.equal(health.body.database, 'disconnected');
-    }
+    assert.equal(health.status, 200, 'Healthy DB connection returns exact HTTP 200');
+    assert.equal(health.body.success, true);
+    assert.equal(health.body.status, 'ok', 'Connected DB returns status ok');
+    assert.equal(health.body.database, 'connected', 'Connected DB returns database connected');
+    assert.equal(health.body.storage, 'mongodb', 'Connected DB returns storage mongodb');
   });
 
-  await t.test('2. Auth User Profile & Password Change', async () => {
+  await t.test('2. Health Endpoint Degraded Contract (GET /api/health → 503 Degraded)', async () => {
+    // Temporarily override readyState on instance
+    Object.defineProperty(mongoose.connection, 'readyState', {
+      value: 0,
+      configurable: true,
+      writable: true
+    });
+
+    const degraded = await request('GET', '/health');
+    assert.equal(degraded.status, 503, 'Degraded DB returns exact HTTP 503');
+    assert.equal(degraded.body.success, false);
+    assert.equal(degraded.body.status, 'degraded', 'Disconnected DB returns status degraded');
+    assert.equal(degraded.body.database, 'disconnected', 'Disconnected DB returns database disconnected');
+
+    // Delete instance property to restore prototype getter (which returns 1)
+    delete mongoose.connection.readyState;
+  });
+
+  await t.test('3. Auth User Profile & Password Change', async () => {
     const profile = await request('PUT', '/auth/profile', { name: 'Updated Reg User', currency: 'INR' }, userToken);
     assert.equal(profile.status, 200);
     assert.equal(profile.body.user.name, 'Updated Reg User');
@@ -114,7 +128,7 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
     userToken = login.body.token;
   });
 
-  await t.test('3. Transactions CRUD & Pagination', async () => {
+  await t.test('4. Transactions CRUD & Pagination', async () => {
     const today = new Date().toISOString().slice(0, 10);
     const createTxn = await request('POST', '/transactions', {
       type: 'expense',
@@ -135,7 +149,7 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
     assert.equal(deleteTxn.status, 200);
   });
 
-  await t.test('4. Budgets CRUD', async () => {
+  await t.test('5. Budgets CRUD', async () => {
     const createB = await request('POST', '/budgets', {
       category: 'Utilities',
       monthlyLimit: 5000
@@ -151,7 +165,7 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
     assert.equal(deleteB.status, 200);
   });
 
-  await t.test('5. Goals CRUD & Funding', async () => {
+  await t.test('6. Goals CRUD & Funding', async () => {
     const createG = await request('POST', '/goals', {
       name: 'New Laptop',
       targetAmount: 80000,
@@ -169,7 +183,7 @@ test('Core Application Regression & Health Contract Suite', async (t) => {
     assert.equal(deleteG.status, 200);
   });
 
-  await t.test('6. API 404 Catch-All', async () => {
+  await t.test('7. API 404 Catch-All', async () => {
     const notFound = await request('GET', '/non-existent-route');
     assert.equal(notFound.status, 404);
     assert.equal(notFound.body.success, false);
