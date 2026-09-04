@@ -7,6 +7,26 @@ async function getAll(req, res, next) {
   try {
     const { type, category, month, from, to, search, page, limit } = req.query;
 
+    if (page !== undefined) {
+      const p = Number(page);
+      if (isNaN(p) || p < 1 || !Number.isInteger(p)) {
+        return res.status(400).json({ success: false, message: 'Page must be a positive integer >= 1.' });
+      }
+    }
+
+    if (limit !== undefined) {
+      const l = Number(limit);
+      if (isNaN(l) || l < 1 || !Number.isInteger(l)) {
+        return res.status(400).json({ success: false, message: 'Limit must be a positive integer >= 1.' });
+      }
+    }
+
+    if (month && month !== 'all') {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month.trim())) {
+        return res.status(400).json({ success: false, message: 'Invalid month format. Expected YYYY-MM.' });
+      }
+    }
+
     const filters = { type, category, month, from, to, search };
     if (page !== undefined || limit !== undefined) {
       filters.paginate = true;

@@ -34,9 +34,9 @@ async function create(req, res, next) {
 
     const existing = await Budget.findByCategory(req.user.id, category, targetMonth);
     if (existing) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
-        message: `A budget for "${category}" ${targetMonth ? 'for ' + targetMonth : ''} already exists. Edit the existing one instead.`
+        message: 'A budget already exists for this category and month.'
       });
     }
 
@@ -53,6 +53,12 @@ async function create(req, res, next) {
       budget
     });
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'A budget already exists for this category and month.'
+      });
+    }
     next(err);
   }
 }
@@ -62,6 +68,27 @@ async function create(req, res, next) {
  */
 async function update(req, res, next) {
   try {
+    const { category, month } = req.body;
+    if (category || month !== undefined) {
+      const current = await Budget.findById(req.params.id, req.user.id);
+      if (!current) {
+        return res.status(404).json({
+          success: false,
+          message: 'Budget not found.'
+        });
+      }
+      const newCat = category || current.category;
+      const newMonth = month !== undefined ? (month ? month.trim() : null) : current.month;
+      
+      const existing = await Budget.findByCategory(req.user.id, newCat, newMonth);
+      if (existing && existing.id !== req.params.id) {
+        return res.status(409).json({
+          success: false,
+          message: 'A budget already exists for this category and month.'
+        });
+      }
+    }
+
     const budget = await Budget.update(req.params.id, req.user.id, req.body);
 
     if (!budget) {
@@ -77,6 +104,12 @@ async function update(req, res, next) {
       budget
     });
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'A budget already exists for this category and month.'
+      });
+    }
     next(err);
   }
 }

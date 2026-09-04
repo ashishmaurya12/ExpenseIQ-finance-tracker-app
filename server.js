@@ -40,6 +40,19 @@ app.use('/api/auth/register', authRateLimiter);
 // --------------- Static Files ---------------
 app.use(express.static(path.join(__dirname, 'public')));
 
+const mongoose = require('mongoose');
+
+// --------------- Health Endpoint ---------------
+app.get('/api/health', (req, res) => {
+  const isConnected = mongoose.connection.readyState === 1;
+  res.status(isConnected ? 200 : 503).json({
+    success: true,
+    status: isConnected ? 'ok' : 'degraded',
+    database: isConnected ? 'connected' : 'disconnected',
+    storage: isConnected ? 'mongodb' : 'json_filestore'
+  });
+});
+
 // --------------- API Routes ---------------
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/transactions', require('./src/routes/transactions'));
@@ -63,16 +76,37 @@ app.get('*', (req, res) => {
 // --------------- Error Handler ---------------
 app.use(errorHandler);
 
-// --------------- Start Server ---------------
+// --------------- Start Server & Graceful Shutdown ---------------
+let server;
+
 async function startServer() {
   const connected = await connectDB();
   if (connected) {
     await migrateJsonToMongo();
   }
 
-  app.listen(PORT, () => {
+  server = app.listen(PORT, () => {
     console.log(`  🚀 ExpenseIQ server running at http://localhost:${PORT}\n`);
   });
 }
+
+function handleShutdown(signal) {
+  console.log(`\n  🛑 ${signal} received. Initiating graceful shutdown...`);
+  if (server) {
+    server.close(async () => {
+      console.log('  🔒 HTTP server closed.');
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+        console.log('  🍃 MongoDB connection closed.');
+      }
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
+}
+
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 
 startServer();

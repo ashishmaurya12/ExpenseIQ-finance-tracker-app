@@ -9,9 +9,11 @@ function errorHandler(err, req, res, next) {
   let message = err.message || 'Internal Server Error';
 
   if (err.code === 11000) {
-    statusCode = 400;
-    const field = Object.keys(err.keyPattern || err.keyValue || {})[0] || 'record';
-    message = `A record with this ${field} already exists. Duplicate entries are not allowed.`;
+    statusCode = 409;
+    const isBudget = err.message && err.message.includes('Budget');
+    message = isBudget
+      ? 'A budget already exists for this category and month.'
+      : 'A record with this unique identifier already exists.';
   } else if (err.name === 'CastError') {
     statusCode = 400;
     message = `Invalid ID or format for field: ${err.path}`;

@@ -646,14 +646,14 @@ function renderAIHealthWidget(data) {
   const insightsListEl = document.getElementById('aiInsightsList');
   if (insightsListEl && data.insights && data.insights.length > 0) {
     insightsListEl.innerHTML = data.insights.map(i => `
-      <div class="ai-insight-card ${i.type}">
+      <div class="ai-insight-card ${escapeHTML(i.type)}">
         <div class="ai-insight-icon">${i.icon}</div>
         <div class="ai-insight-content">
           <div class="ai-insight-title-row">
-            <span class="ai-insight-title">${i.title}</span>
-            ${i.badge ? `<span class="ai-insight-badge">${i.badge}</span>` : ''}
+            <span class="ai-insight-title">${escapeHTML(i.title)}</span>
+            ${i.badge ? `<span class="ai-insight-badge">${escapeHTML(i.badge)}</span>` : ''}
           </div>
-          <p class="ai-insight-desc">${i.description}</p>
+          <p class="ai-insight-desc">${escapeHTML(i.description)}</p>
         </div>
       </div>
     `).join('');
@@ -667,7 +667,7 @@ function renderAIHealthWidget(data) {
       anomalyBox.classList.remove('hidden');
       anomalyList.innerHTML = data.anomalies.map(a => `
         <div class="anomaly-item">
-          <span><strong>${getCategoryIcon(a.category)} ${a.category}</strong> (${formatDate(a.date)}) — ${a.note}</span>
+          <span><strong>${getCategoryIcon(a.category)} ${escapeHTML(a.category)}</strong> (${formatDate(a.date)}) — ${escapeHTML(a.note)}</span>
           <span style="font-weight:700;color:var(--color-expense)">${formatCurrency(a.amount)} (${a.ratio}x avg)</span>
         </div>
       `).join('');

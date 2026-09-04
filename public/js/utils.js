@@ -13,6 +13,10 @@ function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
+function escapeHtml(str) {
+  return escapeHTML(str);
+}
+
 // ─── Currency Formatting ────────────────────────────────────
 function formatCurrency(amount, currency = 'INR') {
   const formatter = new Intl.NumberFormat('en-IN', {

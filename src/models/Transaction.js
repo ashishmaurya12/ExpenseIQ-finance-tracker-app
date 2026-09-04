@@ -235,6 +235,145 @@ async function remove(id, userId) {
  * Get summary data for dashboard charts with optional month filter.
  */
 async function getSummary(userId, targetMonth = null) {
+  if (isMongoConnected()) {
+    const isTargetMonth = targetMonth && targetMonth !== 'all';
+    const targetRegex = isTargetMonth ? `^${targetMonth}` : null;
+
+    const [facetResult] = await TransactionModel.aggregate([
+      { $match: { userId } },
+      {
+        $facet: {
+          filteredTotals: [
+            ...(targetRegex ? [{ $match: { date: { $regex: targetRegex } } }] : []),
+            { $group: { _id: '$type', total: { $sum: '$amount' } } }
+          ],
+          filteredCategories: [
+            { $match: { type: 'expense', ...(targetRegex ? { date: { $regex: targetRegex } } : {}) } },
+            { $group: { _id: '$category', total: { $sum: '$amount' } } }
+          ],
+          filteredIncomeCategories: [
+            { $match: { type: 'income', ...(targetRegex ? { date: { $regex: targetRegex } } : {}) } },
+            { $group: { _id: '$category', total: { $sum: '$amount' } } }
+          ],
+          dailyExpenses: [
+            { $match: { type: 'expense', ...(targetRegex ? { date: { $regex: targetRegex } } : {}) } },
+            { $group: { _id: '$date', total: { $sum: '$amount' } } }
+          ],
+          monthlyHistory: [
+            {
+              $group: {
+                _id: {
+                  month: { $substrBytes: ['$date', 0, 7] },
+                  type: '$type'
+                },
+                total: { $sum: '$amount' }
+              }
+            }
+          ],
+          allMonths: [
+            {
+              $group: {
+                _id: { $substrBytes: ['$date', 0, 7] }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+    if (facetResult && facetResult.filteredTotals) {
+      facetResult.filteredTotals.forEach(item => {
+        if (item._id === 'income') totalIncome = item.total;
+        if (item._id === 'expense') totalExpense = item.total;
+      });
+    }
+
+    const categoryBreakdown = {};
+    if (facetResult && facetResult.filteredCategories) {
+      facetResult.filteredCategories.forEach(item => {
+        if (item._id) categoryBreakdown[item._id] = item.total;
+      });
+    }
+
+    const incomeBreakdown = {};
+    if (facetResult && facetResult.filteredIncomeCategories) {
+      facetResult.filteredIncomeCategories.forEach(item => {
+        if (item._id) incomeBreakdown[item._id] = item.total;
+      });
+    }
+
+    const monthlyMap = {};
+    if (facetResult && facetResult.monthlyHistory) {
+      facetResult.monthlyHistory.forEach(item => {
+        const m = item._id ? item._id.month : null;
+        if (m && m.length === 7) {
+          if (!monthlyMap[m]) monthlyMap[m] = { month: m, income: 0, expense: 0 };
+          if (item._id.type === 'income') monthlyMap[m].income += item.total;
+          if (item._id.type === 'expense') monthlyMap[m].expense += item.total;
+        }
+      });
+    }
+    const sortedMonthly = Object.values(monthlyMap)
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-6);
+
+    const monthSet = new Set();
+    if (facetResult && facetResult.allMonths) {
+      facetResult.allMonths.forEach(item => {
+        if (item._id && item._id.length === 7) monthSet.add(item._id);
+      });
+    }
+    monthSet.add(getCurrentMonth());
+    const availableMonths = Array.from(monthSet).sort().reverse();
+
+    const dailyMap = {};
+    if (isTargetMonth) {
+      const [yearStr, monthStr] = targetMonth.split('-');
+      const year = parseInt(yearStr, 10);
+      const monthIdx = parseInt(monthStr, 10) - 1;
+      const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dStr = `${targetMonth}-${String(day).padStart(2, '0')}`;
+        dailyMap[dStr] = 0;
+      }
+    } else {
+      const today = new Date();
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        dailyMap[dateStr] = 0;
+      }
+    }
+
+    if (facetResult && facetResult.dailyExpenses) {
+      facetResult.dailyExpenses.forEach(item => {
+        if (item._id && dailyMap[item._id] !== undefined) {
+          dailyMap[item._id] = item.total;
+        }
+      });
+    }
+
+    const dailyData = Object.entries(dailyMap).map(([date, amount]) => ({
+      date,
+      amount: Math.round(amount * 100) / 100
+    }));
+
+    return {
+      totalIncome: Math.round(totalIncome * 100) / 100,
+      totalExpense: Math.round(totalExpense * 100) / 100,
+      balance: Math.round((totalIncome - totalExpense) * 100) / 100,
+      categoryBreakdown,
+      incomeBreakdown,
+      monthlyData: sortedMonthly,
+      dailyData,
+      availableMonths,
+      selectedMonth: targetMonth || 'all'
+    };
+  }
+
   const transactions = await findByUserId(userId);
 
   // Collect available unique months
@@ -336,6 +475,32 @@ async function getSummary(userId, targetMonth = null) {
  */
 async function getCurrentMonthExpensesByCategory(userId, targetMonth = null) {
   const monthToUse = targetMonth || getCurrentMonth();
+  if (isMongoConnected()) {
+    const expenses = await TransactionModel.aggregate([
+      {
+        $match: {
+          userId,
+          type: 'expense',
+          date: { $regex: `^${monthToUse}` }
+        }
+      },
+      {
+        $group: {
+          _id: '$category',
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
+    const byCategory = {};
+    expenses.forEach(item => {
+      if (item._id) {
+        byCategory[item._id.trim()] = item.total;
+      }
+    });
+    return byCategory;
+  }
+
   const transactions = await findByUserId(userId, { month: monthToUse });
 
   const byCategory = {};

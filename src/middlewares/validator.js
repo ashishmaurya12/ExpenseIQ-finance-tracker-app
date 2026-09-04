@@ -76,7 +76,7 @@ function validateTransaction(req, res, next) {
  * Validate budget input.
  */
 function validateBudget(req, res, next) {
-  const { category, monthlyLimit } = req.body;
+  const { category, monthlyLimit, month } = req.body;
   const errors = [];
 
   if (!category || !CATEGORIES.includes(category)) {
@@ -84,6 +84,12 @@ function validateBudget(req, res, next) {
   }
   if (monthlyLimit === undefined || isNaN(monthlyLimit) || Number(monthlyLimit) <= 0) {
     errors.push('Monthly limit must be a positive number.');
+  }
+  if (month !== undefined && month !== null && String(month).trim() !== '') {
+    const monthStr = String(month).trim();
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthStr)) {
+      errors.push('Invalid month format. Expected YYYY-MM.');
+    }
   }
 
   if (errors.length > 0) {
