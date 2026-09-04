@@ -4,7 +4,7 @@ const { generateId, getMonthFromDate, getCurrentMonth } = require('../utils/help
 
 const FILE = 'transactions.json';
 
-// Mongoose Transaction Schema
+// Mongoose Transaction Schema & Compound Indexes
 const transactionSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   userId: { type: String, required: true, index: true },
@@ -17,6 +17,11 @@ const transactionSchema = new mongoose.Schema({
   updatedAt: { type: Date }
 });
 
+transactionSchema.index({ userId: 1, date: -1 });
+transactionSchema.index({ userId: 1, category: 1 });
+transactionSchema.index({ userId: 1, type: 1 });
+transactionSchema.index({ userId: 1, date: -1, category: 1 });
+
 const TransactionModel = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
 function isMongoConnected() {
@@ -24,9 +29,14 @@ function isMongoConnected() {
 }
 
 /**
- * Get all transactions for a user, with optional filters.
+ * Get all transactions for a user, with optional filters, search, and pagination.
  */
 async function findByUserId(userId, filters = {}) {
+  const isPaginated = filters.paginate === true || filters.page !== undefined || (filters.limit !== undefined && Number(filters.limit) > 0);
+  const page = Math.max(1, parseInt(filters.page, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 20));
+  const skip = (page - 1) * limit;
+
   if (isMongoConnected()) {
     const query = { userId };
     if (filters.type) query.type = filters.type;
@@ -36,6 +46,36 @@ async function findByUserId(userId, filters = {}) {
       query.date = query.date || {};
       if (filters.from) query.date.$gte = filters.from;
       if (filters.to) query.date.$lte = filters.to;
+    }
+    if (filters.search && typeof filters.search === 'string' && filters.search.trim()) {
+      const searchRegex = new RegExp(filters.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      query.$or = [
+        { note: searchRegex },
+        { category: searchRegex }
+      ];
+    }
+
+    if (isPaginated) {
+      const total = await TransactionModel.countDocuments(query);
+      const totalPages = Math.ceil(total / limit) || 1;
+      const transactions = await TransactionModel.find(query)
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const cleaned = transactions.map(t => { delete t._id; delete t.__v; return t; });
+      return {
+        transactions: cleaned,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1
+        }
+      };
     }
 
     const transactions = await TransactionModel.find(query).sort({ date: -1 }).lean();
@@ -53,8 +93,34 @@ async function findByUserId(userId, filters = {}) {
   if (filters.month) transactions = transactions.filter(t => t.date && t.date.startsWith(filters.month));
   if (filters.from) transactions = transactions.filter(t => t.date >= filters.from);
   if (filters.to) transactions = transactions.filter(t => t.date <= filters.to);
+  if (filters.search && typeof filters.search === 'string' && filters.search.trim()) {
+    const s = filters.search.toLowerCase().trim();
+    transactions = transactions.filter(t =>
+      (t.note && t.note.toLowerCase().includes(s)) ||
+      (t.category && t.category.toLowerCase().includes(s))
+    );
+  }
 
   transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (isPaginated) {
+    const total = transactions.length;
+    const totalPages = Math.ceil(total / limit) || 1;
+    const paginated = transactions.slice(skip, skip + limit);
+
+    return {
+      transactions: paginated,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1
+      }
+    };
+  }
+
   return transactions;
 }
 

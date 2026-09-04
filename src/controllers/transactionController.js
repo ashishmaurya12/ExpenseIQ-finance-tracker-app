@@ -5,13 +5,30 @@ const Transaction = require('../models/Transaction');
  */
 async function getAll(req, res, next) {
   try {
-    const { type, category, month, from, to } = req.query;
-    const transactions = await Transaction.findByUserId(req.user.id, { type, category, month, from, to });
+    const { type, category, month, from, to, search, page, limit } = req.query;
+
+    const filters = { type, category, month, from, to, search };
+    if (page !== undefined || limit !== undefined) {
+      filters.paginate = true;
+      filters.page = page;
+      filters.limit = limit;
+    }
+
+    const result = await Transaction.findByUserId(req.user.id, filters);
+
+    if (result && result.pagination) {
+      return res.json({
+        success: true,
+        count: result.transactions.length,
+        transactions: result.transactions,
+        pagination: result.pagination
+      });
+    }
 
     res.json({
       success: true,
-      count: transactions.length,
-      transactions
+      count: result.length,
+      transactions: result
     });
   } catch (err) {
     next(err);

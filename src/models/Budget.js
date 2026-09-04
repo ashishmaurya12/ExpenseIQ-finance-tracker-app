@@ -5,15 +5,19 @@ const Transaction = require('./Transaction');
 
 const FILE = 'budgets.json';
 
-// Mongoose Budget Schema
+// Mongoose Budget Schema & Indexes
 const budgetSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   userId: { type: String, required: true, index: true },
   category: { type: String, required: true },
   monthlyLimit: { type: Number, required: true },
+  month: { type: String, default: null, trim: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date }
 });
+
+budgetSchema.index({ userId: 1, category: 1, month: 1 }, { unique: true });
+budgetSchema.index({ userId: 1, month: 1 });
 
 const BudgetModel = mongoose.models.Budget || mongoose.model('Budget', budgetSchema);
 
@@ -22,18 +26,27 @@ function isMongoConnected() {
 }
 
 /**
- * Get all budgets for a user.
+ * Get all budgets for a user (optionally filtered by month).
  */
-async function findByUserId(userId) {
+async function findByUserId(userId, targetMonth = null) {
   if (isMongoConnected()) {
-    const budgets = await BudgetModel.find({ userId }).lean();
+    const query = { userId };
+    if (targetMonth && targetMonth !== 'all') {
+      query.$or = [{ month: targetMonth }, { month: null }, { month: { $exists: false } }];
+    }
+    const budgets = await BudgetModel.find(query).lean();
     return budgets.map(b => {
       delete b._id;
       delete b.__v;
       return b;
     });
   }
-  return readData(FILE).filter(b => b.userId === userId);
+
+  let budgets = readData(FILE).filter(b => b.userId === userId);
+  if (targetMonth && targetMonth !== 'all') {
+    budgets = budgets.filter(b => !b.month || b.month === targetMonth);
+  }
+  return budgets;
 }
 
 /**
@@ -52,29 +65,32 @@ async function findById(id, userId) {
 }
 
 /**
- * Check if a budget already exists for a category.
+ * Check if a budget already exists for a category and month.
  */
-async function findByCategory(userId, category) {
+async function findByCategory(userId, category, month = null) {
+  const monthVal = month ? month.trim() : null;
   if (isMongoConnected()) {
-    const b = await BudgetModel.findOne({ userId, category }).lean();
+    const b = await BudgetModel.findOne({ userId, category, month: monthVal }).lean();
     if (!b) return null;
     delete b._id;
     delete b.__v;
     return b;
   }
   const budgets = readData(FILE);
-  return budgets.find(b => b.userId === userId && b.category === category) || null;
+  return budgets.find(b => b.userId === userId && b.category === category && (b.month || null) === monthVal) || null;
 }
 
 /**
  * Create a new budget.
  */
-async function create({ userId, category, monthlyLimit }) {
+async function create({ userId, category, monthlyLimit, month = null }) {
+  const monthVal = month ? month.trim() : null;
   const newBudget = {
     id: generateId(),
     userId,
     category,
     monthlyLimit: Number(monthlyLimit),
+    month: monthVal,
     createdAt: new Date().toISOString()
   };
 
@@ -103,6 +119,7 @@ async function update(id, userId, data) {
         $set: {
           ...(data.monthlyLimit !== undefined && { monthlyLimit: Number(data.monthlyLimit) }),
           ...(data.category && { category: data.category }),
+          ...(data.month !== undefined && { month: data.month ? data.month.trim() : null }),
           updatedAt: new Date()
         }
       },
@@ -123,6 +140,7 @@ async function update(id, userId, data) {
     ...budgets[index],
     monthlyLimit: data.monthlyLimit !== undefined ? Number(data.monthlyLimit) : budgets[index].monthlyLimit,
     category: data.category || budgets[index].category,
+    month: data.month !== undefined ? (data.month ? data.month.trim() : null) : budgets[index].month,
     updatedAt: new Date().toISOString()
   };
 
@@ -153,7 +171,7 @@ async function remove(id, userId) {
  * Get all budgets with spending data attached for a target month (or current month).
  */
 async function getWithSpending(userId, targetMonth = null) {
-  const budgets = await findByUserId(userId);
+  const budgets = await findByUserId(userId, targetMonth);
   const currentSpending = await Transaction.getCurrentMonthExpensesByCategory(userId, targetMonth);
 
   const spendingNormalized = {};

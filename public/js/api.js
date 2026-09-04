@@ -129,6 +129,9 @@ async function apiGetTransactions(filters = {}) {
   if (filters.month) params.set('month', filters.month);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
+  if (filters.search) params.set('search', filters.search);
+  if (filters.page) params.set('page', filters.page);
+  if (filters.limit) params.set('limit', filters.limit);
 
   const query = params.toString();
   return apiFetch(`/transactions${query ? '?' + query : ''}`);

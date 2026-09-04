@@ -8,7 +8,11 @@ function errorHandler(err, req, res, next) {
   let statusCode = err.statusCode || err.status || 500;
   let message = err.message || 'Internal Server Error';
 
-  if (err.name === 'CastError') {
+  if (err.code === 11000) {
+    statusCode = 400;
+    const field = Object.keys(err.keyPattern || err.keyValue || {})[0] || 'record';
+    message = `A record with this ${field} already exists. Duplicate entries are not allowed.`;
+  } else if (err.name === 'CastError') {
     statusCode = 400;
     message = `Invalid ID or format for field: ${err.path}`;
   } else if (err.name === 'ValidationError') {

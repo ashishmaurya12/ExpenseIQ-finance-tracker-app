@@ -26,6 +26,7 @@
 
       <!-- Filters -->
       <div class="filter-bar">
+        <input type="text" class="form-control" id="filterSearch" placeholder="🔍 Search note or category..." style="flex:1;min-width:180px">
         <select class="form-control" id="filterMonth">
           <option value="">All Months</option>
         </select>
@@ -75,8 +76,15 @@
         </div>
       </div>
 
-      <!-- Transaction Count -->
-      <p class="text-muted mt-md" id="transactionCount" style="font-size:0.8rem"></p>
+      <!-- Pagination & Transaction Count -->
+      <div class="pagination-container" style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:12px">
+        <p class="text-muted" id="transactionCount" style="font-size:0.8rem;margin:0"></p>
+        <div class="pagination-bar" id="paginationBar" style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-secondary btn-sm" id="btnPrevPage" disabled>← Previous</button>
+          <span class="text-muted" id="paginationInfo" style="font-size:0.85rem;font-weight:600">Page 1 of 1</span>
+          <button class="btn btn-secondary btn-sm" id="btnNextPage" disabled>Next →</button>
+        </div>
+      </div>
     </main>
   </div>
 

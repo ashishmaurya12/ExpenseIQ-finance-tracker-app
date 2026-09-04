@@ -35,8 +35,12 @@ async function migrateJsonToMongo() {
     if (budgetCount === 0) {
       const jsonBudgets = readData('budgets.json');
       if (jsonBudgets.length > 0) {
-        await BudgetModel.insertMany(jsonBudgets);
-        console.log(`  📥 Migrated ${jsonBudgets.length} budgets to MongoDB.`);
+        const sanitizedBudgets = jsonBudgets.map(b => ({
+          ...b,
+          month: b.month ? b.month.trim() : null
+        }));
+        await BudgetModel.insertMany(sanitizedBudgets);
+        console.log(`  📥 Migrated ${sanitizedBudgets.length} budgets to MongoDB.`);
       }
     }
 

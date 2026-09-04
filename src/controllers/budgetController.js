@@ -29,20 +29,22 @@ async function getAll(req, res, next) {
  */
 async function create(req, res, next) {
   try {
-    const { category, monthlyLimit } = req.body;
+    const { category, monthlyLimit, month } = req.body;
+    const targetMonth = month ? month.trim() : null;
 
-    const existing = await Budget.findByCategory(req.user.id, category);
+    const existing = await Budget.findByCategory(req.user.id, category, targetMonth);
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: `A budget for "${category}" already exists. Edit the existing one instead.`
+        message: `A budget for "${category}" ${targetMonth ? 'for ' + targetMonth : ''} already exists. Edit the existing one instead.`
       });
     }
 
     const budget = await Budget.create({
       userId: req.user.id,
       category,
-      monthlyLimit
+      monthlyLimit,
+      month: targetMonth
     });
 
     res.status(201).json({

@@ -82,14 +82,39 @@ function attachEventListeners() {
     handleSave();
   });
 
-  // Filters
-  const filterHandler = debounce(loadTransactions, 400);
+  // Filters & Search
+  const filterResetHandler = debounce(() => {
+    currentPage = 1;
+    loadTransactions();
+  }, 400);
+
+  const filterSearchEl = document.getElementById('filterSearch');
+  if (filterSearchEl) filterSearchEl.addEventListener('input', filterResetHandler);
+
   const filterMonthEl = document.getElementById('filterMonth');
-  if (filterMonthEl) filterMonthEl.addEventListener('change', filterHandler);
-  document.getElementById('filterType').addEventListener('change', filterHandler);
-  document.getElementById('filterCategory').addEventListener('change', filterHandler);
-  document.getElementById('filterFrom').addEventListener('change', filterHandler);
-  document.getElementById('filterTo').addEventListener('change', filterHandler);
+  if (filterMonthEl) filterMonthEl.addEventListener('change', filterResetHandler);
+  document.getElementById('filterType').addEventListener('change', filterResetHandler);
+  document.getElementById('filterCategory').addEventListener('change', filterResetHandler);
+  document.getElementById('filterFrom').addEventListener('change', filterResetHandler);
+  document.getElementById('filterTo').addEventListener('change', filterResetHandler);
+
+  // Pagination buttons
+  const prevBtn = document.getElementById('btnPrevPage');
+  const nextBtn = document.getElementById('btnNextPage');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        loadTransactions();
+      }
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      currentPage++;
+      loadTransactions();
+    });
+  }
 
   // Export CSV
   document.getElementById('btnExportCSV')?.addEventListener('click', async () => {
@@ -99,7 +124,8 @@ function attachEventListeners() {
         type: document.getElementById('filterType').value,
         category: document.getElementById('filterCategory').value,
         from: document.getElementById('filterFrom').value,
-        to: document.getElementById('filterTo').value
+        to: document.getElementById('filterTo').value,
+        search: document.getElementById('filterSearch')?.value || ''
       };
       const data = await apiGetTransactions(filters);
       if (!data.transactions || data.transactions.length === 0) {
@@ -121,7 +147,8 @@ function attachEventListeners() {
         type: document.getElementById('filterType').value,
         category: document.getElementById('filterCategory').value,
         from: document.getElementById('filterFrom').value,
-        to: document.getElementById('filterTo').value
+        to: document.getElementById('filterTo').value,
+        search: document.getElementById('filterSearch')?.value || ''
       };
       const data = await apiGetTransactions(filters);
       if (!data.transactions || data.transactions.length === 0) {
@@ -136,36 +163,50 @@ function attachEventListeners() {
 
   // Clear filters
   document.getElementById('btnClearFilters').addEventListener('click', () => {
+    const filterSearch = document.getElementById('filterSearch');
+    if (filterSearch) filterSearch.value = '';
     const filterMonth = document.getElementById('filterMonth');
     if (filterMonth) filterMonth.value = '';
     document.getElementById('filterType').value = '';
     document.getElementById('filterCategory').value = '';
     document.getElementById('filterFrom').value = '';
     document.getElementById('filterTo').value = '';
+    currentPage = 1;
     loadTransactions();
   });
 }
 
 let myTxnChart = null;
 let availableMonthsLoaded = false;
+let currentPage = 1;
+const itemsPerPage = 10;
 
 // ─── Load & Render Transactions ─────────────────────────────
 async function loadTransactions() {
   const monthVal = document.getElementById('filterMonth')?.value || '';
+  const searchVal = document.getElementById('filterSearch')?.value || '';
   const filters = {
     month: monthVal,
     type: document.getElementById('filterType').value,
     category: document.getElementById('filterCategory').value,
     from: document.getElementById('filterFrom').value,
-    to: document.getElementById('filterTo').value
+    to: document.getElementById('filterTo').value,
+    search: searchVal,
+    page: currentPage,
+    limit: itemsPerPage
   };
+
+  const tbody = document.getElementById('transactionsBody');
+  if (tbody && (!dataTransactionsLoadedOnce)) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:32px"><span class="spinner"></span> Loading transactions...</td></tr>`;
+  }
 
   try {
     const data = await apiGetTransactions(filters);
-    renderTable(data.transactions);
-    renderTxnChart(data.transactions);
-    document.getElementById('transactionCount').textContent =
-      `${data.count} transaction${data.count !== 1 ? 's' : ''} found`;
+    dataTransactionsLoadedOnce = true;
+    renderTable(data.transactions || []);
+    renderTxnChart(data.transactions || []);
+    renderPaginationControls(data.pagination, data.count || 0);
 
     // Populate available months if not yet populated
     if (!availableMonthsLoaded) {
@@ -179,6 +220,36 @@ async function loadTransactions() {
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+let dataTransactionsLoadedOnce = false;
+
+function renderPaginationControls(pagination, currentCount) {
+  const countEl = document.getElementById('transactionCount');
+  const infoEl = document.getElementById('paginationInfo');
+  const prevBtn = document.getElementById('btnPrevPage');
+  const nextBtn = document.getElementById('btnNextPage');
+
+  if (!pagination) {
+    if (countEl) countEl.textContent = `${currentCount} transaction${currentCount !== 1 ? 's' : ''} found`;
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    if (infoEl) infoEl.textContent = 'Page 1 of 1';
+    return;
+  }
+
+  const { page, totalPages, total, hasNextPage, hasPreviousPage } = pagination;
+  currentPage = page;
+
+  if (countEl) {
+    const start = total === 0 ? 0 : (page - 1) * itemsPerPage + 1;
+    const end = Math.min(page * itemsPerPage, total);
+    countEl.textContent = total === 0 ? 'No transactions found' : `Showing ${start}–${end} of ${total} transactions`;
+  }
+
+  if (infoEl) infoEl.textContent = `Page ${page} of ${totalPages || 1}`;
+  if (prevBtn) prevBtn.disabled = !hasPreviousPage;
+  if (nextBtn) nextBtn.disabled = !hasNextPage;
 }
 
 function populateTxnMonthDropdown(availableMonths, selectedMonth) {
