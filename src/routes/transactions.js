@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/auth');
-const { validateTransaction } = require('../middlewares/validator');
+const { validateTransaction, validateIdParam } = require('../middlewares/validator');
 const transactionController = require('../controllers/transactionController');
 
 // All routes require authentication
@@ -20,9 +20,9 @@ router.get('/', transactionController.getAll);
 router.post('/', validateTransaction, transactionController.create);
 
 // PUT /api/transactions/:id
-router.put('/:id', validateTransaction, transactionController.update);
+router.put('/:id', validateIdParam, validateTransaction, transactionController.update);
 
 // DELETE /api/transactions/:id
-router.delete('/:id', transactionController.remove);
+router.delete('/:id', validateIdParam, transactionController.remove);
 
 module.exports = router;

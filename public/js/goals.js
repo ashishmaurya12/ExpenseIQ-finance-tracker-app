@@ -76,19 +76,19 @@ function renderGoals(goals) {
     const fillClass = goal.isCompleted ? 'complete' : '';
 
     return `
-      <div class="goal-card ${goal.isCompleted ? 'completed' : ''}" data-id="${goal.id}">
+      <div class="goal-card ${goal.isCompleted ? 'completed' : ''}" data-id="${escapeHTML(goal.id)}">
         <div class="goal-card-header">
           <div class="goal-info">
-            <div class="goal-icon">${goal.icon}</div>
+            <div class="goal-icon">${escapeHTML(goal.icon)}</div>
             <div>
-              <div class="goal-name">${goal.name}</div>
+              <div class="goal-name">${escapeHTML(goal.name)}</div>
               ${goal.deadline ? `<div class="goal-deadline">Target: ${formatDate(goal.deadline)}</div>` : ''}
             </div>
           </div>
           <div class="goal-actions">
-            ${!goal.isCompleted ? `<button class="btn-fund" onclick="openFundModal('${goal.id}')" title="Add funds">💰 Fund</button>` : ''}
-            <button class="btn-icon edit" title="Edit" onclick="handleEditGoal('${goal.id}')">✏️</button>
-            <button class="btn-icon delete" title="Delete" onclick="handleDeleteGoal('${goal.id}')">🗑️</button>
+            ${!goal.isCompleted ? `<button class="btn-fund" onclick="openFundModal('${escapeHTML(goal.id)}')" title="Add funds">💰 Fund</button>` : ''}
+            <button class="btn-icon edit" title="Edit" onclick="handleEditGoal('${escapeHTML(goal.id)}')">✏️</button>
+            <button class="btn-icon delete" title="Delete" onclick="handleDeleteGoal('${escapeHTML(goal.id)}')">🗑️</button>
           </div>
         </div>
 

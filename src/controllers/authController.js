@@ -98,4 +98,63 @@ async function getMe(req, res, next) {
   }
 }
 
-module.exports = { register, login, getMe };
+/**
+ * PUT /api/auth/password (protected)
+ */
+async function changePassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findByEmail(req.user.email);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    const isMatch = await User.comparePassword(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect.'
+      });
+    }
+
+    await User.updatePassword(req.user.id, newPassword);
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully.'
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/auth/profile (protected)
+ */
+async function updateProfile(req, res, next) {
+  try {
+    const { name, currency } = req.body;
+
+    const updatedUser = await User.updateProfile(req.user.id, { name, currency });
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully.',
+      user: updatedUser
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, getMe, changePassword, updateProfile };

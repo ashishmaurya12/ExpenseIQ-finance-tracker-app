@@ -138,15 +138,15 @@ function renderBudgets(budgets) {
     const statusClass = percentUsed >= 90 ? 'danger' : percentUsed >= 75 ? 'warning' : 'safe';
 
     return `
-      <div class="budget-card" data-id="${budget.id}">
+      <div class="budget-card" data-id="${escapeHTML(budget.id)}">
         <div class="budget-card-header">
           <div class="budget-category">
             <div class="budget-category-icon">${getCategoryIcon(budget.category)}</div>
-            <span class="budget-category-name">${budget.category}</span>
+            <span class="budget-category-name">${escapeHTML(budget.category)}</span>
           </div>
           <div class="table-actions">
-            <button class="btn-icon edit" title="Edit" onclick="handleEditBudget('${budget.id}')">✏️</button>
-            <button class="btn-icon delete" title="Delete" onclick="handleDeleteBudget('${budget.id}')">🗑️</button>
+            <button class="btn-icon edit" title="Edit" onclick="handleEditBudget('${escapeHTML(budget.id)}')">✏️</button>
+            <button class="btn-icon delete" title="Delete" onclick="handleDeleteBudget('${escapeHTML(budget.id)}')">🗑️</button>
           </div>
         </div>
 

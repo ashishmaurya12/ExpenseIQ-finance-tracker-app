@@ -35,20 +35,20 @@ function initSidebar(activePage) {
       <div class="sidebar-footer">
         <!-- User Profile Card & Popover Menu -->
         <div class="sidebar-user" id="userMenuCard" title="Click for profile options">
-          <div class="user-avatar">${initials}</div>
+          <div class="user-avatar">${escapeHTML(initials)}</div>
           <div class="user-info">
-            <div class="user-name">${user ? user.name : 'User'}</div>
-            <div class="user-email">${user ? user.email : ''}</div>
+            <div class="user-name">${user ? escapeHTML(user.name) : 'User'}</div>
+            <div class="user-email">${user ? escapeHTML(user.email) : ''}</div>
           </div>
           <span class="user-menu-dots">⋮</span>
 
           <!-- Popover Dropdown -->
           <div class="user-popover-menu" id="userPopoverMenu">
             <div class="user-popover-header">
-              <div class="user-avatar sm">${initials}</div>
+              <div class="user-avatar sm">${escapeHTML(initials)}</div>
               <div style="min-width:0;flex:1">
-                <div class="user-popover-name">${user ? user.name : 'User'}</div>
-                <div class="user-popover-email">${user ? user.email : ''}</div>
+                <div class="user-popover-name">${user ? escapeHTML(user.name) : 'User'}</div>
+                <div class="user-popover-email">${user ? escapeHTML(user.email) : ''}</div>
               </div>
             </div>
             <div class="user-popover-divider"></div>

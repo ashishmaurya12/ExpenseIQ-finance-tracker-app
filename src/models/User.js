@@ -95,10 +95,64 @@ async function comparePassword(plainPassword, hashedPassword) {
   return bcrypt.compare(plainPassword, hashedPassword);
 }
 
+/**
+ * Update user password with bcrypt hashing.
+ */
+async function updatePassword(id, newPassword) {
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+  if (isMongoConnected()) {
+    await UserModel.updateOne({ id }, { password: hashedPassword });
+    return true;
+  }
+
+  const users = readData(FILE);
+  const user = users.find(u => u.id === id);
+  if (!user) return false;
+  user.password = hashedPassword;
+  writeData(FILE, users);
+  return true;
+}
+
+/**
+ * Update user profile details (name, currency).
+ */
+async function updateProfile(id, updates) {
+  const fieldsToUpdate = {};
+  if (updates.name) fieldsToUpdate.name = updates.name.trim();
+  if (updates.currency) fieldsToUpdate.currency = updates.currency.trim();
+
+  if (isMongoConnected()) {
+    const updated = await UserModel.findOneAndUpdate(
+      { id },
+      { $set: fieldsToUpdate },
+      { new: true }
+    ).lean();
+    if (!updated) return null;
+    delete updated.password;
+    delete updated._id;
+    delete updated.__v;
+    return updated;
+  }
+
+  const users = readData(FILE);
+  const user = users.find(u => u.id === id);
+  if (!user) return null;
+  if (updates.name) user.name = updates.name.trim();
+  if (updates.currency) user.currency = updates.currency.trim();
+  writeData(FILE, users);
+
+  const { password: _, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+}
+
 module.exports = {
   UserModel,
   findByEmail,
   findById,
   create,
-  comparePassword
+  comparePassword,
+  updatePassword,
+  updateProfile
 };

@@ -293,20 +293,20 @@ function renderTable(transactions) {
   }
 
   tbody.innerHTML = transactions.map(t => `
-    <tr data-id="${t.id}">
+    <tr data-id="${escapeHTML(t.id)}">
       <td>${formatDate(t.date)}</td>
-      <td><span class="badge badge-${t.type}">${t.type}</span></td>
-      <td>${getCategoryIcon(t.category)} ${t.category}</td>
-      <td class="text-muted">${t.note || '—'}</td>
+      <td><span class="badge badge-${t.type === 'income' ? 'income' : 'expense'}">${escapeHTML(t.type)}</span></td>
+      <td>${getCategoryIcon(t.category)} ${escapeHTML(t.category)}</td>
+      <td class="text-muted">${t.note ? escapeHTML(t.note) : '—'}</td>
       <td style="text-align:right">
-        <span class="amount ${t.type}">
+        <span class="amount ${t.type === 'income' ? 'income' : 'expense'}">
           ${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}
         </span>
       </td>
       <td style="text-align:center">
         <div class="table-actions" style="justify-content:center">
-          <button class="btn-icon edit" title="Edit" onclick="handleEdit('${t.id}')">✏️</button>
-          <button class="btn-icon delete" title="Delete" onclick="handleDelete('${t.id}')">🗑️</button>
+          <button class="btn-icon edit" title="Edit" onclick="handleEdit('${escapeHTML(t.id)}')">✏️</button>
+          <button class="btn-icon delete" title="Delete" onclick="handleDelete('${escapeHTML(t.id)}')">🗑️</button>
         </div>
       </td>
     </tr>

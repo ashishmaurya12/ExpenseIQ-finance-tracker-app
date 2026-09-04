@@ -2,6 +2,17 @@
  * ExpenseIQ — Utility Functions
  */
 
+// ─── HTML Sanitization ──────────────────────────────────────
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // ─── Currency Formatting ────────────────────────────────────
 function formatCurrency(amount, currency = 'INR') {
   const formatter = new Intl.NumberFormat('en-IN', {

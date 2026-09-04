@@ -208,8 +208,7 @@ function adjustColorBrightness(hex, percent) {
   return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
 }
 
-function handleSaveSettings() {
-  const user = getUser();
+async function handleSaveSettings() {
   const newName = document.getElementById('settingsName').value.trim();
   const newCurrency = document.getElementById('settingsCurrency').value;
   const newDateFormat = document.getElementById('settingsDateFormat').value;
@@ -220,22 +219,21 @@ function handleSaveSettings() {
     return;
   }
 
-  if (user) {
-    user.name = newName;
-    user.currency = newCurrency;
-    setUser(user);
+  try {
+    const res = await apiUpdateProfile(newName, newCurrency);
+    localStorage.setItem('expenseiq_date_format', newDateFormat);
+    localStorage.setItem('expenseiq_budget_threshold', newThreshold);
+    showToast(res.message || 'Profile & display settings saved!', 'success');
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
+  } catch (err) {
+    showToast(err.message, 'error');
   }
-
-  localStorage.setItem('expenseiq_date_format', newDateFormat);
-  localStorage.setItem('expenseiq_budget_threshold', newThreshold);
-  showToast('Profile & display settings saved!', 'success');
-
-  setTimeout(() => {
-    window.location.reload();
-  }, 600);
 }
 
-function handlePasswordUpdate() {
+async function handlePasswordUpdate() {
   const current = document.getElementById('pwdCurrent').value;
   const newPwd = document.getElementById('pwdNew').value;
   const confirmPwd = document.getElementById('pwdConfirm').value;
@@ -259,9 +257,15 @@ function handlePasswordUpdate() {
     return;
   }
 
-  errorEl.style.display = 'none';
-  showToast('Password updated successfully!', 'success');
-  document.getElementById('passwordForm').reset();
+  try {
+    errorEl.style.display = 'none';
+    const res = await apiChangePassword(current, newPwd, confirmPwd);
+    showToast(res.message || 'Password updated successfully!', 'success');
+    document.getElementById('passwordForm').reset();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = 'block';
+  }
 }
 
 async function handleDownloadBackup() {

@@ -94,9 +94,66 @@ function validateBudget(req, res, next) {
   next();
 }
 
+/**
+ * Validate password change input.
+ */
+function validatePasswordChange(req, res, next) {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const errors = [];
+
+  if (!currentPassword) {
+    errors.push('Current password is required.');
+  }
+  if (!newPassword || newPassword.length < 6) {
+    errors.push('New password must be at least 6 characters.');
+  }
+  if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+    errors.push('New password and confirm password do not match.');
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, message: errors.join(' ') });
+  }
+  next();
+}
+
+/**
+ * Validate profile update input.
+ */
+function validateProfileUpdate(req, res, next) {
+  const { name, currency } = req.body;
+  const errors = [];
+
+  if (name !== undefined && (!name || name.trim().length < 2)) {
+    errors.push('Name must be at least 2 characters.');
+  }
+  if (currency !== undefined && (!currency || typeof currency !== 'string')) {
+    errors.push('Valid currency code is required.');
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, message: errors.join(' ') });
+  }
+  next();
+}
+
+/**
+ * Validate route ID parameter.
+ */
+function validateIdParam(req, res, next) {
+  const { id } = req.params;
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    return res.status(400).json({ success: false, message: 'Invalid ID parameter.' });
+  }
+  next();
+}
+
 module.exports = {
   validateRegister,
   validateLogin,
   validateTransaction,
-  validateBudget
+  validateBudget,
+  validatePasswordChange,
+  validateProfileUpdate,
+  validateIdParam
 };

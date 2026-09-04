@@ -103,6 +103,24 @@ async function apiGetMe() {
   return apiFetch('/auth/me');
 }
 
+async function apiChangePassword(currentPassword, newPassword, confirmPassword) {
+  return apiFetch('/auth/password', {
+    method: 'PUT',
+    body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+  });
+}
+
+async function apiUpdateProfile(name, currency) {
+  const data = await apiFetch('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify({ name, currency })
+  });
+  if (data.user) {
+    setUser(data.user);
+  }
+  return data;
+}
+
 // ─── Transactions API ───────────────────────────────────────
 async function apiGetTransactions(filters = {}) {
   const params = new URLSearchParams();
