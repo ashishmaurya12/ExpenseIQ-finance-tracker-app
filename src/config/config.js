@@ -39,5 +39,11 @@ module.exports = {
   TRANSACTION_TYPES: ['income', 'expense'],
 
   // Default currency
-  DEFAULT_CURRENCY: 'INR'
+  DEFAULT_CURRENCY: 'INR',
+
+  // AI Configuration
+  AI_ENABLED: process.env.AI_ENABLED !== 'false',
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini'
 };
+

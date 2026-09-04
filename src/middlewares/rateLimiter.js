@@ -29,7 +29,24 @@ const apiRateLimiter = rateLimit({
   }
 });
 
+/**
+ * Dedicated rate limiter for AI chat and insights endpoints.
+ * Protects against excessive OpenAI API costs and spam.
+ */
+const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit each IP to 30 AI requests per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many AI requests from this IP. Please wait a few minutes before trying again.'
+  }
+});
+
 module.exports = {
   authRateLimiter,
-  apiRateLimiter
+  apiRateLimiter,
+  aiRateLimiter
 };
+

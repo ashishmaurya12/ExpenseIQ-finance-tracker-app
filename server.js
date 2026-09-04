@@ -80,6 +80,8 @@ app.use('/api/transactions', require('./src/routes/transactions'));
 app.use('/api/budgets', require('./src/routes/budgets'));
 app.use('/api/goals', require('./src/routes/goals'));
 app.use('/api/insights', require('./src/routes/insights'));
+app.use('/api/ai', require('./src/routes/ai'));
+
 
 // --------------- API 404 Catch-All ---------------
 app.all('/api/*', (req, res) => {

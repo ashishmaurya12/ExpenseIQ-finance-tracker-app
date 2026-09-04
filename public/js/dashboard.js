@@ -671,11 +671,42 @@ function renderAIHealthWidget(data) {
           <span style="font-weight:700;color:var(--color-expense)">${formatCurrency(a.amount)} (${a.ratio}x avg)</span>
         </div>
       `).join('');
-    } else {
-      anomalyBox.classList.add('hidden');
-    }
+  // Bind Generate AI Insights button
+  const btnAiInsights = document.getElementById('btnGenerateAiInsights');
+  if (btnAiInsights) {
+    btnAiInsights.addEventListener('click', async () => {
+      const originalText = btnAiInsights.textContent;
+      btnAiInsights.disabled = true;
+      btnAiInsights.textContent = '⏳ Generating...';
+      try {
+        const res = await apiGetAiInsights();
+        if (res && res.success && Array.isArray(res.insights)) {
+          const insightsListEl = document.getElementById('aiInsightsList');
+          if (insightsListEl) {
+            insightsListEl.innerHTML = res.insights.map(i => `
+              <div class="ai-insight-card positive" style="border-left: 3px solid var(--accent-purple);">
+                <div class="ai-insight-icon">🤖</div>
+                <div class="ai-insight-content">
+                  <div class="ai-insight-title-row">
+                    <span class="ai-insight-title">${escapeHTML(i.title)}</span>
+                    <span class="ai-insight-badge" style="background:var(--accent-purple);color:#fff">${escapeHTML(i.category || 'AI')}</span>
+                  </div>
+                  <p class="ai-insight-desc">${escapeHTML(i.description)}</p>
+                </div>
+              </div>
+            `).join('');
+          }
+        }
+      } catch (err) {
+        alert(err.message || 'AI insights temporarily unavailable.');
+      } finally {
+        btnAiInsights.disabled = false;
+        btnAiInsights.textContent = originalText;
+      }
+    });
   }
 }
+
 
 // ─── Greeting ───────────────────────────────────────────────
 function updateGreeting() {

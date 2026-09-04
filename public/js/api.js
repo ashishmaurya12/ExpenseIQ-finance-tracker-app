@@ -229,6 +229,19 @@ async function apiGetInsights() {
   return apiFetch('/insights');
 }
 
+// ─── AI Assistant API ────────────────────────────────────────
+async function apiSendAiMessage(message, history = []) {
+  return apiFetch('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, history })
+  });
+}
+
+async function apiGetAiInsights() {
+  return apiFetch('/ai/insights');
+}
+
+
 // ─── CSV Export Utility ─────────────────────────────────────
 function exportToCSV(transactions, filename = 'expenseiq_transactions.csv') {
   if (!transactions || transactions.length === 0) {
