@@ -81,6 +81,9 @@ app.use('/api/budgets', require('./src/routes/budgets'));
 app.use('/api/goals', require('./src/routes/goals'));
 app.use('/api/insights', require('./src/routes/insights'));
 app.use('/api/ai', require('./src/routes/ai'));
+app.use('/api/recurring', require('./src/routes/recurring'));
+app.use('/api/reminders', require('./src/routes/reminders'));
+app.use('/api/notifications', require('./src/routes/notifications'));
 
 
 // --------------- API 404 Catch-All ---------------

@@ -165,6 +165,149 @@ function validateIdParam(req, res, next) {
   next();
 }
 
+/**
+ * Validate recurring transaction input.
+ */
+function validateRecurringTransaction(req, res, next) {
+  const { type, amount, category, frequency, startDate, nextDueDate, endDate, description, notes } = req.body;
+  const errors = [];
+  const ALLOWED_FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
+  const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (type !== undefined || req.method === 'POST') {
+    if (!type || !['income', 'expense'].includes(type)) {
+      errors.push("Type must be either 'income' or 'expense'.");
+    }
+  }
+
+  if (amount !== undefined || req.method === 'POST') {
+    if (amount === undefined || amount === null || isNaN(amount) || !isFinite(amount) || Number(amount) <= 0) {
+      errors.push('Amount must be a positive finite number.');
+    }
+  }
+
+  if (category !== undefined || req.method === 'POST') {
+    if (!category || typeof category !== 'string' || !category.trim() || category.length > 50) {
+      errors.push('Category is required and must not exceed 50 characters.');
+    }
+  }
+
+  if (frequency !== undefined || req.method === 'POST') {
+    if (!frequency || !ALLOWED_FREQUENCIES.includes(frequency)) {
+      errors.push(`Frequency must be one of: ${ALLOWED_FREQUENCIES.join(', ')}.`);
+    }
+  }
+
+  if (startDate !== undefined || req.method === 'POST') {
+    if (!startDate || !DATE_REGEX.test(startDate) || isNaN(Date.parse(startDate))) {
+      errors.push('startDate must be a valid date in YYYY-MM-DD format.');
+    }
+  }
+
+  if (nextDueDate !== undefined && nextDueDate !== null) {
+    if (!DATE_REGEX.test(nextDueDate) || isNaN(Date.parse(nextDueDate))) {
+      errors.push('nextDueDate must be a valid date in YYYY-MM-DD format.');
+    }
+  }
+
+  if (endDate !== undefined && endDate !== null && endDate !== '') {
+    if (!DATE_REGEX.test(endDate) || isNaN(Date.parse(endDate))) {
+      errors.push('endDate must be a valid date in YYYY-MM-DD format.');
+    } else if (startDate && endDate < startDate) {
+      errors.push('endDate cannot be before startDate.');
+    }
+  }
+
+  if (description !== undefined && description !== null && String(description).length > 200) {
+    errors.push('Description must not exceed 200 characters.');
+  }
+
+  if (notes !== undefined && notes !== null && String(notes).length > 500) {
+    errors.push('Notes must not exceed 500 characters.');
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, message: errors.join(' ') });
+  }
+  next();
+}
+
+/**
+ * Validate reminder input.
+ */
+function validateReminder(req, res, next) {
+  const { title, amount, dueDate, priority, status, reminderDaysBefore, notes } = req.body;
+  const errors = [];
+  const ALLOWED_STATUSES = ['pending', 'completed', 'overdue', 'dismissed'];
+  const ALLOWED_PRIORITIES = ['low', 'medium', 'high'];
+  const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (title !== undefined || req.method === 'POST') {
+    if (!title || typeof title !== 'string' || !title.trim() || title.length > 100) {
+      errors.push('Title is required and must not exceed 100 characters.');
+    }
+  }
+
+  if (amount !== undefined && amount !== null && amount !== '') {
+    if (isNaN(amount) || !isFinite(amount) || Number(amount) < 0) {
+      errors.push('Amount must be a non-negative finite number.');
+    }
+  }
+
+  if (dueDate !== undefined || req.method === 'POST') {
+    if (!dueDate || !DATE_REGEX.test(dueDate) || isNaN(Date.parse(dueDate))) {
+      errors.push('dueDate must be a valid date in YYYY-MM-DD format.');
+    }
+  }
+
+  if (status !== undefined && !ALLOWED_STATUSES.includes(status)) {
+    errors.push(`Status must be one of: ${ALLOWED_STATUSES.join(', ')}.`);
+  }
+
+  if (priority !== undefined && !ALLOWED_PRIORITIES.includes(priority)) {
+    errors.push(`Priority must be one of: ${ALLOWED_PRIORITIES.join(', ')}.`);
+  }
+
+  if (reminderDaysBefore !== undefined && reminderDaysBefore !== null) {
+    const days = parseInt(reminderDaysBefore, 10);
+    if (isNaN(days) || days < 0 || days > 30) {
+      errors.push('reminderDaysBefore must be an integer between 0 and 30.');
+    }
+  }
+
+  if (notes !== undefined && notes !== null && String(notes).length > 500) {
+    errors.push('Notes must not exceed 500 characters.');
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, message: errors.join(' ') });
+  }
+  next();
+}
+
+/**
+ * Validate notification query/input parameters.
+ */
+function validateNotification(req, res, next) {
+  const { type, priority } = req.body;
+  const errors = [];
+  const ALLOWED_TYPES = ['reminder', 'budget', 'goal', 'system', 'anomaly', 'ai_insight'];
+  const ALLOWED_PRIORITIES = ['low', 'medium', 'high'];
+
+  if (type !== undefined && !ALLOWED_TYPES.includes(type)) {
+    errors.push(`Type must be one of: ${ALLOWED_TYPES.join(', ')}.`);
+  }
+
+  if (priority !== undefined && !ALLOWED_PRIORITIES.includes(priority)) {
+    errors.push(`Priority must be one of: ${ALLOWED_PRIORITIES.join(', ')}.`);
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({ success: false, message: errors.join(' ') });
+  }
+  next();
+}
+
 module.exports = {
   validateRegister,
   validateLogin,
@@ -172,5 +315,8 @@ module.exports = {
   validateBudget,
   validatePasswordChange,
   validateProfileUpdate,
-  validateIdParam
+  validateIdParam,
+  validateRecurringTransaction,
+  validateReminder,
+  validateNotification
 };

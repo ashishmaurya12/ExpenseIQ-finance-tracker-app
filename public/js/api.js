@@ -241,6 +241,94 @@ async function apiGetAiInsights() {
   return apiFetch('/ai/insights');
 }
 
+// ─── Recurring Transactions API ──────────────────────────────
+async function apiGetRecurringTransactions(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/recurring${query ? `?${query}` : ''}`);
+}
+
+async function apiCreateRecurringTransaction(data) {
+  return apiFetch('/recurring', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiUpdateRecurringTransaction(id, data) {
+  return apiFetch(`/recurring/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiDeleteRecurringTransaction(id) {
+  return apiFetch(`/recurring/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+async function apiProcessRecurringTransactions() {
+  return apiFetch('/recurring/process', {
+    method: 'POST'
+  });
+}
+
+// ─── Reminders API ───────────────────────────────────────────
+async function apiGetReminders(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/reminders${query ? `?${query}` : ''}`);
+}
+
+async function apiCreateReminder(data) {
+  return apiFetch('/reminders', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiUpdateReminder(id, data) {
+  return apiFetch(`/reminders/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+async function apiCompleteReminder(id) {
+  return apiFetch(`/reminders/${id}/complete`, {
+    method: 'POST'
+  });
+}
+
+async function apiDeleteReminder(id) {
+  return apiFetch(`/reminders/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+// ─── Notifications API ───────────────────────────────────────
+async function apiGetNotifications(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiFetch(`/notifications${query ? `?${query}` : ''}`);
+}
+
+async function apiMarkNotificationRead(id) {
+  return apiFetch(`/notifications/${id}/read`, {
+    method: 'PUT'
+  });
+}
+
+async function apiMarkAllNotificationsRead() {
+  return apiFetch('/notifications/read-all', {
+    method: 'POST'
+  });
+}
+
+async function apiDeleteNotification(id) {
+  return apiFetch(`/notifications/${id}`, {
+    method: 'DELETE'
+  });
+}
+
 
 // ─── CSV Export Utility ─────────────────────────────────────
 function exportToCSV(transactions, filename = 'expenseiq_transactions.csv') {
