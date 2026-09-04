@@ -17,8 +17,10 @@ ExpenseIQ is a full-stack personal finance application built with Node.js, Expre
 - Full completion workflow marking bills completed with timestamps.
 
 ### 3. Notification Center
-- Smart notification center with real-time unread badges, pagination, mark read, mark all read, and deletion.
-- Automated deduplicated alert generation for bill due dates (due today, due tomorrow, overdue).
+- Smart notification center with periodically refreshed unread notification badge, pagination, mark read, mark all read, and deletion.
+- Configurable `reminderDaysBefore` window (0–30 days, default 3) controlling when reminder notifications trigger.
+- Automated deduplicated alert generation for bill due dates (due today, due tomorrow, overdue) using MongoDB compound unique indexes (`userId` + `dedupKey`).
+- User preference toggles (`notificationsEnabled`, `reminderAlertsEnabled`) to control notification generation and badge rendering.
 - Budget utilization threshold alerts (70%, 90%, 100%).
 - Savings goal milestone alerts and deadline warnings.
 
