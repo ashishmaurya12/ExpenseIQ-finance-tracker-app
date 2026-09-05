@@ -32,7 +32,21 @@ function setUser(user) {
 }
 
 function isAuthenticated() {
-  return !!getToken();
+  const token = getToken();
+  if (!token) return false;
+  // Basic JWT expiry check (decode payload without verifying signature)
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.exp && Date.now() / 1000 > payload.exp) {
+      removeToken(); // Clear expired token immediately
+      return false;
+    }
+  } catch {
+    // Malformed token – treat as unauthenticated
+    removeToken();
+    return false;
+  }
+  return true;
 }
 
 // ─── API Fetch Wrapper ──────────────────────────────────────
@@ -54,11 +68,13 @@ async function apiFetch(endpoint, options = {}) {
     const data = await response.json();
 
     if (!response.ok) {
-      // Token expired or invalid → redirect to login
+      // Token expired or invalid → clear token and redirect to login immediately
       if (response.status === 401) {
         removeToken();
-        if (!window.location.pathname.includes('index.html') && window.location.pathname !== '/') {
-          window.location.href = '/index.html';
+        const onAuthPage = window.location.pathname.includes('index.html') || window.location.pathname === '/';
+        if (!onAuthPage) {
+          window.location.replace('/index.html');
+          return; // Stop further execution
         }
       }
       throw new Error(data.message || 'Something went wrong');

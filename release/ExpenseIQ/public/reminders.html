@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Bill & Payment Reminders — Track credit card bills, utility payments, and upcoming dues.">
+  <title>Bill Reminders — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Bill Reminders</h1>
+          <p class="subtitle">Stay on top of credit card bills, utilities, and due dates</p>
+        </div>
+        <div>
+          <button class="btn btn-primary" id="btnAddReminder">
+            + Add Reminder
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Controls -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div class="tab-group" style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-secondary active" id="tabAll">All Dues</button>
+          <button class="btn btn-sm btn-secondary" id="tabOverdue">⚠️ Overdue</button>
+          <button class="btn btn-sm btn-secondary" id="tabUpcoming">📅 Upcoming</button>
+          <button class="btn btn-sm btn-secondary" id="tabCompleted">✅ Completed</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:0.85rem;font-weight:600;color:var(--text-secondary)">Priority:</label>
+          <select id="reminderPriorityFilter" class="form-control" style="min-width:130px">
+            <option value="">All Priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Reminders Grid/List -->
+      <div class="reminders-grid" id="remindersContainer" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:20px">
+        <div class="text-center text-muted" style="padding:48px;grid-column:1/-1">
+          Loading reminders...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Reminder Modal -->
+  <div class="modal-overlay" id="reminderModal">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <h2 id="reminderModalTitle">Add Bill Reminder</h2>
+        <button class="modal-close" id="reminderModalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="reminderForm" novalidate>
+          <input type="hidden" id="reminderId">
+
+          <div class="form-group">
+            <label for="remTitle">Title</label>
+            <input type="text" id="remTitle" class="form-control" placeholder="e.g. Electricity Bill, Credit Card Payment" maxlength="150" required>
+          </div>
+
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group">
+              <label for="remAmount">Amount (₹)</label>
+              <input type="number" id="remAmount" class="form-control" placeholder="e.g. 2400" min="0" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="remDueDate">Due Date</label>
+              <input type="date" id="remDueDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group">
+              <label for="remCategory">Category</label>
+              <select id="remCategory" class="form-control" required></select>
+            </div>
+            <div class="form-group">
+              <label for="remPriority">Priority</label>
+              <select id="remPriority" class="form-control" required>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="remDaysBefore">Remind Days Before</label>
+            <input type="number" id="remDaysBefore" class="form-control" value="3" min="0" max="30" required>
+            <small style="color:var(--text-secondary)">Number of days before due date to start notifying (0-30 days)</small>
+          </div>
+
+          <div class="form-group">
+            <label for="remNotes">Notes</label>
+            <textarea id="remNotes" class="form-control" rows="2" placeholder="Account number, payment link notes..." maxlength="500"></textarea>
+          </div>
+
+          <div id="reminderError" class="form-error" style="display:none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelReminder">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveReminder">Save Reminder</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/reminders.js"></script>
+</body>
+</html>

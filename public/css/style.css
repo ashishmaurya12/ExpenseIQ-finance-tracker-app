@@ -2027,9 +2027,10 @@ body.dark-theme, html[data-theme="dark"] body {
 
 /* Goals page responsive */
 @media (max-width: 768px) {
-/* ================================================================
-   AI HEALTH SCORE & INSIGHTS WIDGET
-   ================================================================ */
+  .goals-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .health-widget {
   background: var(--bg-surface);
   border: 1px solid var(--glass-border);
@@ -2208,9 +2209,9 @@ body.dark-theme, html[data-theme="dark"] body {
    ======================================================================== */
 .ai-fab-btn {
   position: fixed;
-  bottom: 28px;
+  bottom: 96px;
   right: 28px;
-  z-index: 999;
+  z-index: 1200;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2241,7 +2242,7 @@ body.dark-theme, html[data-theme="dark"] body {
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px);
-  z-index: 1000;
+  z-index: 1100;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -2262,7 +2263,7 @@ body.dark-theme, html[data-theme="dark"] body {
   background: var(--bg-surface);
   border-left: 1px solid var(--border-subtle);
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.2);
-  z-index: 1001;
+  z-index: 1101;
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
@@ -2542,5 +2543,197 @@ body.dark-theme, html[data-theme="dark"] body {
   margin-top: 8px;
 }
 
+/* Utility & Empty State Styles */
+.hidden {
+  display: none !important;
+}
 
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty-state .empty-icon {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 0.85rem;
+  margin: 0;
+  max-width: 280px;
+}
+
+
+/* ================================================================
+   RESPONSIVE — MEDIA QUERIES
+   ================================================================ */
+
+/* Tablet (≤ 1024px): Slightly tighter sidebar + content */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-width: 220px;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .main-content {
+    padding: var(--space-lg);
+  }
+}
+
+/* Mobile (≤ 768px): Sidebar becomes off-canvas overlay */
+@media (max-width: 768px) {
+  /* Show hamburger toggle button */
+  .sidebar-toggle {
+    display: flex;
+  }
+
+  /* Sidebar hidden off-screen to the left by default */
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: none;
+    z-index: 200;
+  }
+
+  /* Sidebar slides in when .open class is toggled by JS */
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Main content fills full width (no sidebar margin) */
+  .main-content {
+    margin-left: 0;
+    padding: var(--space-lg) var(--space-md);
+    padding-top: 72px; /* space for the hamburger button */
+  }
+
+  /* Charts stack to single column */
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  /* Summary cards: 2 per row on mobile */
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+
+  .summary-card .card-value {
+    font-size: 1.3rem;
+  }
+
+  /* Page header wraps neatly */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .page-header h1 {
+    font-size: 1.4rem;
+  }
+
+  /* Tables scroll horizontally on small screens */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modal fills screen on mobile */
+  .modal {
+    width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* FAB stays visible but moves slightly */
+  .fab-container {
+    bottom: 20px;
+    right: 16px;
+  }
+  .ai-fab-btn {
+    bottom: 84px;
+    right: 16px;
+  }
+
+  /* Analytics grid stacks */
+  .analytics-grid,
+  .forecast-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Health widget stacks */
+  .health-widget-body {
+    flex-direction: column;
+  }
+}
+
+/* Small phones (≤ 480px) */
+@media (max-width: 480px) {
+  .summary-cards {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+  }
+
+  .summary-card {
+    padding: var(--space-md) var(--space-sm);
+  }
+
+  .summary-card .card-value {
+    font-size: 1.1rem;
+  }
+
+  .summary-card .card-label {
+    font-size: 0.7rem;
+  }
+
+  .main-content {
+    padding: var(--space-md) var(--space-sm);
+    padding-top: 72px;
+  }
+
+  .chart-card {
+    padding: var(--space-md);
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+  }
+}
+
+/* ================================================================
+   SIDEBAR OVERLAY BACKDROP (mobile)
+   ================================================================ */
+
+/* Dim overlay behind open sidebar on mobile */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 150;
+  backdrop-filter: blur(2px);
+}
+
+@media (max-width: 768px) {
+  .sidebar-backdrop.active {
+    display: block;
+  }
+}
 

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Settings — Configure themes, accent colors, security, notifications, and data backup.">
+  <title>Settings — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Settings</h1>
+          <p class="subtitle">Manage theme, accent colors, security, alerts, and data backups</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:24px;max-width:1100px">
+        
+        <!-- Theme & Accent Color Card -->
+        <div class="card">
+          <div class="flex-between mb-md">
+            <h3 style="font-size:1.05rem;font-weight:700">🎨 Appearance & Accent Color</h3>
+            <span class="badge badge-category">Theme</span>
+          </div>
+          <p class="text-secondary" style="font-size:0.85rem;margin-bottom:16px">
+            Choose your theme and primary brand color. Applied across all buttons, active badges, and highlights.
+          </p>
+
+          <!-- Light vs Dark Mode Option Cards -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+            <label class="theme-option-card" id="optionLight">
+              <input type="radio" name="themeSelect" value="light" id="radioLight">
+              <div class="theme-option-preview light-preview">
+                <div class="preview-header"></div>
+                <div class="preview-card"></div>
+              </div>
+              <div class="theme-option-label">
+                <span>☀️ Light Mode</span>
+                <span class="theme-check">✓</span>
+              </div>
+            </label>
+
+            <label class="theme-option-card" id="optionDark">
+              <input type="radio" name="themeSelect" value="dark" id="radioDark">
+              <div class="theme-option-preview dark-preview">
+                <div class="preview-header"></div>
+                <div class="preview-card"></div>
+              </div>
+              <div class="theme-option-label">
+                <span>🌙 Dark Mode</span>
+                <span class="theme-check">✓</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Brand Accent Color Swatches -->
+          <div style="margin-top:16px">
+            <label style="display:block;font-size:0.8rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">
+              Brand Accent Color
+            </label>
+            <div class="color-swatches-grid" id="accentSwatches">
+              <button class="color-swatch active" data-color="#00C9A7" style="background:#00C9A7" title="Mint Emerald Teal"></button>
+              <button class="color-swatch" data-color="#6366F1" style="background:#6366F1" title="Royal Indigo"></button>
+              <button class="color-swatch" data-color="#8B5CF6" style="background:#8B5CF6" title="Lavender Violet"></button>
+              <button class="color-swatch" data-color="#F43F5E" style="background:#F43F5E" title="Rose Coral"></button>
+              <button class="color-swatch" data-color="#F97316" style="background:#F97316" title="Warm Orange"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account & Display Preferences Card -->
+        <div class="card">
+          <div class="flex-between mb-md">
+            <h3 style="font-size:1.05rem;font-weight:700">👤 Profile & Display</h3>
+            <span class="badge badge-income">Account</span>
+          </div>
+
+          <form id="settingsForm" novalidate style="margin-top:12px">
+            <div class="form-group">
+              <label for="settingsName">Full Name</label>
+              <input type="text" id="settingsName" class="form-control" placeholder="Your Name" required>
+            </div>
+
+            <div class="form-group">
+              <label for="settingsEmail">Email Address</label>
+              <input type="email" id="settingsEmail" class="form-control" disabled style="opacity:0.7">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="settingsCurrency">Currency</label>
+                <select id="settingsCurrency" class="form-control">
+                  <option value="INR">₹ INR (Rupee)</option>
+                  <option value="USD">$ USD (Dollar)</option>
+                  <option value="EUR">€ EUR (Euro)</option>
+                  <option value="GBP">£ GBP (Pound)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="settingsDateFormat">Date Format</label>
+                <select id="settingsDateFormat" class="form-control">
+                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnSaveSettings" style="width:100%;margin-top:4px">
+              💾 Save Profile Settings
+            </button>
+          </form>
+        </div>
+
+        <!-- Notifications & Alerts Preferences -->
+        <div class="card">
+          <div class="flex-between mb-md">
+            <h3 style="font-size:1.05rem;font-weight:700">🔔 Notifications & Alerts</h3>
+            <span class="badge badge-category">Alerts</span>
+          </div>
+
+          <div class="settings-toggle-list">
+            <div class="settings-toggle-item">
+              <div>
+                <div style="font-weight:600;font-size:0.88rem">Budget Warning Alerts</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Notify when budget exceeds warning threshold</div>
+              </div>
+              <label class="theme-switch">
+                <input type="checkbox" id="toggleBudgetAlerts" checked>
+                <span class="theme-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-item">
+              <div>
+                <div style="font-weight:600;font-size:0.88rem">Upcoming Bill Reminders</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Show reminders for Netflix, Rent, and due bills</div>
+              </div>
+              <label class="theme-switch">
+                <input type="checkbox" id="toggleBillReminders" checked>
+                <span class="theme-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-item">
+              <div>
+                <div style="font-weight:600;font-size:0.88rem">Monthly Summary Digest</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Receive end-of-month spending summary reports</div>
+              </div>
+              <label class="theme-switch">
+                <input type="checkbox" id="toggleMonthlyDigest" checked>
+                <span class="theme-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:16px">
+            <label for="settingsBudgetAlert">Budget Warning Threshold</label>
+            <select id="settingsBudgetAlert" class="form-control">
+              <option value="80">80% of limit (Recommended)</option>
+              <option value="90">90% of limit</option>
+              <option value="100">100% of limit (Exceeded only)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Security & Password Card -->
+        <div class="card">
+          <div class="flex-between mb-md">
+            <h3 style="font-size:1.05rem;font-weight:700">🔒 Security & Password</h3>
+            <span class="badge badge-expense">Security</span>
+          </div>
+
+          <form id="passwordForm" novalidate style="margin-top:12px">
+            <div class="form-group">
+              <label for="pwdCurrent">Current Password</label>
+              <input type="password" id="pwdCurrent" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="pwdNew">New Password</label>
+                <input type="password" id="pwdNew" class="form-control" placeholder="••••••••" minlength="6" required>
+              </div>
+              <div class="form-group">
+                <label for="pwdConfirm">Confirm Password</label>
+                <input type="password" id="pwdConfirm" class="form-control" placeholder="••••••••" minlength="6" required>
+              </div>
+            </div>
+
+            <div id="pwdError" class="form-error" style="display:none;margin-bottom:12px"></div>
+
+            <button type="submit" class="btn btn-secondary" id="btnUpdatePassword" style="width:100%">
+              🔑 Update Password
+            </button>
+          </form>
+        </div>
+
+        <!-- Data Backup, Restore & Export Center -->
+        <div class="card" style="grid-column: 1 / -1">
+          <div class="flex-between mb-md">
+            <h3 style="font-size:1.05rem;font-weight:700">💾 Data Backup & Restore Center</h3>
+            <span class="badge badge-category">Data & Privacy</span>
+          </div>
+
+          <p class="text-secondary" style="font-size:0.85rem;margin-bottom:20px">
+            Export a full JSON backup of all your transactions, budgets, and savings goals to keep your data safe or restore from a previous backup file.
+          </p>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px">
+            
+            <!-- Export CSV -->
+            <div class="backup-action-box">
+              <div style="font-size:1.8rem;margin-bottom:8px">📊</div>
+              <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:4px">Export CSV Report</h4>
+              <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Download spreadsheet CSV of all transactions</p>
+              <button class="btn btn-secondary" id="btnExportCSV" style="width:100%">
+                📥 Export CSV
+              </button>
+            </div>
+
+            <!-- Print / PDF Report -->
+            <div class="backup-action-box">
+              <div style="font-size:1.8rem;margin-bottom:8px">📄</div>
+              <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:4px">Print / PDF Report</h4>
+              <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Generate printable financial report</p>
+              <button class="btn btn-secondary" id="btnExportPDF" style="width:100%">
+                📄 Print / PDF
+              </button>
+            </div>
+
+            <!-- Download Backup -->
+            <div class="backup-action-box">
+              <div style="font-size:1.8rem;margin-bottom:8px">📦</div>
+              <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:4px">Export JSON Backup</h4>
+              <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Download a single file backup of all data</p>
+              <button class="btn btn-secondary" id="btnDownloadBackup" style="width:100%">
+                📥 Download Backup
+              </button>
+            </div>
+
+            <!-- Restore Backup -->
+            <div class="backup-action-box">
+              <div style="font-size:1.8rem;margin-bottom:8px">🔄</div>
+              <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:4px">Restore From Backup</h4>
+              <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Restore transactions and goals from JSON</p>
+              <input type="file" id="backupFileInput" accept=".json" style="display:none">
+              <button class="btn btn-secondary" id="btnRestoreBackup" style="width:100%">
+                📤 Upload & Restore
+              </button>
+            </div>
+
+            <!-- Clear Account Data -->
+            <div class="backup-action-box danger">
+              <div style="font-size:1.8rem;margin-bottom:8px">⚠️</div>
+              <h4 style="font-size:0.95rem;font-weight:700;margin-bottom:4px">Reset App Data</h4>
+              <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">Reset local data to defaults</p>
+              <button class="btn btn-danger" id="btnResetData" style="width:100%">
+                🗑️ Clear All Data
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/aiAssistant.js"></script>
+  <script src="/js/settings.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Analytics & Intelligence — Financial Health 2.0, Cash-Flow Forecasting, Anomaly Detection & AI Monthly Reports.">
+  <title>Analytics & Intelligence — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Analytics & Intelligence</h1>
+          <p class="subtitle">Health Score 2.0, Cash Flow Forecasting, Anomaly Detection & AI Monthly Reports</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <label for="analyticsMonthSelect" style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-right:4px">📅 Primary Period:</label>
+            <select id="analyticsMonthSelect" class="form-control" style="min-width:170px;font-weight:600">
+              <option value="all">All Time / Combined</option>
+            </select>
+          </div>
+          <div>
+            <label for="comparisonMonthSelect" style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-right:4px">🔄 Compare With:</label>
+            <select id="comparisonMonthSelect" class="form-control" style="min-width:170px;font-weight:600">
+              <option value="">(Previous Month)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 1: Financial Health Score 2.0 Card -->
+      <div class="glass-card" style="margin-bottom: 24px; padding: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.5rem;">🩺</span>
+              <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Financial Health Score 2.0</h2>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+              Transparent 0–100 score based on 6 weighted financial health dimensions
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="text-align: right;">
+              <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 700;">OVERALL RATING</div>
+              <div id="healthGradeBadge" class="badge" style="font-size: 1rem; padding: 4px 12px; margin-top: 2px;">Grade --</div>
+            </div>
+            <div style="width: 80px; height: 80px; position: relative; display: flex; align-items: center; justify-content: center; background: var(--bg-elevated); border-radius: 50%; border: 3px solid var(--accent-primary); box-shadow: var(--shadow-glow-green);">
+              <span id="overallHealthScore" style="font-size: 1.6rem; font-weight: 800; color: var(--text-primary);">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Health Score Component Breakdown Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px;" id="healthComponentsGrid">
+          <!-- Dynamically populated component cards -->
+        </div>
+
+        <!-- Strengths, Weaknesses & Recommendations -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <div style="background: var(--bg-elevated); padding: 16px; border-radius: var(--radius-md); border-left: 4px solid var(--color-income);">
+            <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: var(--color-income); display: flex; align-items: center; gap: 6px;">
+              <span>✅</span> Key Strengths
+            </h4>
+            <ul id="healthStrengthsList" style="font-size: 0.82rem; padding-left: 18px; color: var(--text-secondary);">
+              <li>Loading strengths...</li>
+            </ul>
+          </div>
+          <div style="background: var(--bg-elevated); padding: 16px; border-radius: var(--radius-md); border-left: 4px solid var(--color-warning);">
+            <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: var(--color-warning); display: flex; align-items: center; gap: 6px;">
+              <span>⚠️</span> Risk Areas & Weaknesses
+            </h4>
+            <ul id="healthWeaknessesList" style="font-size: 0.82rem; padding-left: 18px; color: var(--text-secondary);">
+              <li>Loading weaknesses...</li>
+            </ul>
+          </div>
+          <div style="background: var(--bg-elevated); padding: 16px; border-radius: var(--radius-md); border-left: 4px solid var(--accent-secondary);">
+            <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: var(--accent-secondary); display: flex; align-items: center; gap: 6px;">
+              <span>💡</span> Actionable Recommendations
+            </h4>
+            <ul id="healthRecommendationsList" style="font-size: 0.82rem; padding-left: 18px; color: var(--text-secondary);">
+              <li>Loading recommendations...</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: Cash-Flow Forecast & Risk Evaluation -->
+      <div class="glass-card" style="margin-bottom: 24px; padding: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.5rem;">🔮</span>
+              <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Cash-Flow Forecasting & Risk Evaluation</h2>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+              Deterministic 1–12 month forecast using weighted moving averages & variance bounds
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="forecastHorizonSelect" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">Horizon:</label>
+            <select id="forecastHorizonSelect" class="form-control" style="width: 110px; font-weight: 600;">
+              <option value="1">1 Month</option>
+              <option value="3" selected>3 Months</option>
+              <option value="6">6 Months</option>
+              <option value="12">12 Months</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Forecast Summary Cards -->
+        <div class="summary-cards" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 20px;">
+          <div class="summary-card income">
+            <div class="card-icon">📈</div>
+            <div class="card-label">Monthly Proj. Income</div>
+            <div class="card-value" id="forecastAvgIncome">₹0</div>
+          </div>
+          <div class="summary-card expense">
+            <div class="card-icon">📉</div>
+            <div class="card-label">Monthly Proj. Expense</div>
+            <div class="card-value" id="forecastAvgExpense">₹0</div>
+          </div>
+          <div class="summary-card balance">
+            <div class="card-icon">💵</div>
+            <div class="card-label">Monthly Proj. Net</div>
+            <div class="card-value" id="forecastAvgNet">₹0</div>
+          </div>
+          <div class="summary-card savings">
+            <div class="card-icon">🎯</div>
+            <div class="card-label">Model Confidence</div>
+            <div class="card-value" id="forecastConfidence">--</div>
+          </div>
+        </div>
+
+        <!-- Risk Factors Alert Container -->
+        <div id="cashFlowRiskContainer" style="margin-bottom: 20px;">
+          <!-- Risk factor items injected here -->
+        </div>
+
+        <!-- Forecast Chart -->
+        <div class="chart-card" style="margin-top: 10px;">
+          <h3>Forecasted Cash-Flow Projection</h3>
+          <div class="chart-container" style="height: 320px;">
+            <canvas id="cashFlowForecastChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: Expense Anomaly Detection -->
+      <div class="glass-card" style="margin-bottom: 24px; padding: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.5rem;">🚨</span>
+              <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Expense Anomaly Detection</h2>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+              Automated detection of statistical outliers (Z-Score > 2.0, Category Spike > 1.5x)
+            </p>
+          </div>
+          <button id="btnScanAnomalies" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px;">
+            <span>🔍</span> Trigger Anomaly Scan
+          </button>
+        </div>
+
+        <div id="anomaliesListContainer">
+          <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem;">
+            Loading anomaly detection data...
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4: Comparative & Multi-Period Analytics -->
+      <div class="glass-card" style="margin-bottom: 24px; padding: 24px;">
+        <div style="margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.5rem;">📊</span>
+            <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">Multi-Period & Comparative Trends</h2>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+            Compare primary period performance with previous periods and historical trends
+          </p>
+        </div>
+
+        <!-- Period Comparison Cards -->
+        <div id="periodComparisonContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <!-- Dynamically populated comparison stats -->
+        </div>
+
+        <div class="charts-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+          <div class="chart-card">
+            <h3>Income vs Expense Trend</h3>
+            <div class="chart-container">
+              <canvas id="analyticsTrendsChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Category Breakdown</h3>
+            <div class="chart-container">
+              <canvas id="analyticsCategoryChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card" style="margin-top: 20px;">
+          <h3>Monthly Historical Performance</h3>
+          <div class="chart-container" style="height: 300px;">
+            <canvas id="analyticsMonthlyHistoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 5: AI Executive Monthly Financial Report -->
+      <div class="glass-card" style="margin-bottom: 24px; padding: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.5rem;">🤖</span>
+              <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0;">AI Executive Monthly Report</h2>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+              Comprehensive 10-section structured AI analysis with personalized recommendations
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <select id="reportMonthSelect" class="form-control" style="width: 170px; font-weight: 600;">
+              <!-- Populated by JS -->
+            </select>
+            <button id="btnGenerateReport" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px;">
+              <span>✨</span> Generate Report
+            </button>
+          </div>
+        </div>
+
+        <div id="monthlyReportContainer" style="background: var(--bg-elevated); padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); min-height: 200px;">
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <div style="font-size: 2rem; margin-bottom: 8px;">📄</div>
+            <p style="font-size: 0.95rem; font-weight: 600;">Select a month and click "Generate Report" to build your AI financial executive report.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/aiAssistant.js"></script>
+  <script src="/js/analytics.js"></script>
+</body>
+</html>

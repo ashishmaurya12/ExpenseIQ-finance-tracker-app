@@ -79,6 +79,9 @@ function initSidebar(activePage) {
       <button class="fab-btn" id="fabAddBtn" title="Quick Add Transaction (Ctrl+N)">+</button>
       <span class="fab-tooltip">Add Transaction (Ctrl+N)</span>
     </div>
+
+    <!-- Mobile sidebar backdrop overlay -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
   `;
 
   // Insert at the beginning of body
@@ -142,23 +145,57 @@ function initSidebar(activePage) {
   // Mobile toggle
   const toggle = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    if (backdrop) backdrop.classList.add('active');
+    document.body.style.overflow = 'hidden'; // prevent body scroll while sidebar open
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('active');
+    document.body.style.overflow = '';
+  }
 
   toggle.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
   });
+
+  // Tap backdrop to close sidebar
+  if (backdrop) {
+    backdrop.addEventListener('click', closeSidebar);
+  }
 
   // Close sidebar on outside click (mobile)
   document.addEventListener('click', (e) => {
     if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-      if (!sidebar.contains(e.target) && e.target !== toggle) {
-        sidebar.classList.remove('open');
+      if (!sidebar.contains(e.target) && e.target !== toggle && e.target !== backdrop) {
+        closeSidebar();
       }
     }
+  });
+
+  // Close sidebar when a nav link is clicked (mobile navigation)
+  sidebar.querySelectorAll('.nav-item').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) closeSidebar();
+    });
   });
 
   // Start periodic notification badge updater (every 30s)
   updateNotificationBadge();
   setInterval(updateNotificationBadge, 30000);
+
+  // Auto-initialize AI Assistant if available
+  if (typeof initAiAssistant === 'function') {
+    initAiAssistant();
+  }
 }
 
 async function updateNotificationBadge() {

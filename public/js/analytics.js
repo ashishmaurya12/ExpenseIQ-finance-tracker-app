@@ -10,7 +10,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Chart instances tracking
+  // Inject sidebar
+  initSidebar('analytics');
+
   let forecastChartInstance = null;
   let trendsChartInstance = null;
   let categoryChartInstance = null;

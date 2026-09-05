@@ -12,3 +12,4 @@ Thumbs.db
 data/*.json
 test/scratch_data/
 data_test_scratch/
+*.zip

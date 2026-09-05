@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Notification Center — View alerts, bill reminders, budget limits, and financial milestones.">
+  <title>Notification Center — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Notification Center</h1>
+          <p class="subtitle">System alerts, bill reminders, and budget notifications</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-secondary" id="btnMarkAllRead">
+            ✓ Mark All as Read
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters & Unread Info Bar -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div class="tab-group" style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-secondary active" id="tabNotifAll">All Notifications</button>
+          <button class="btn btn-sm btn-secondary" id="tabNotifUnread">Unread Only</button>
+          <button class="btn btn-sm btn-secondary" id="tabNotifRead">Read</button>
+        </div>
+        <div style="font-size:0.9rem;color:var(--text-secondary);font-weight:600" id="unreadCountBanner">
+          Unread: 0
+        </div>
+      </div>
+
+      <!-- Notification List Container -->
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:24px">
+        <div id="notificationsList" style="display:flex;flex-direction:column">
+          <div class="text-center text-muted" style="padding:48px">
+            Loading notifications...
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination Bar -->
+      <div style="display:flex;justify-content:space-between;align-items:center" id="paginationBar">
+        <button class="btn btn-secondary btn-sm" id="btnPrevPage" disabled>← Previous</button>
+        <span style="font-size:0.85rem;color:var(--text-secondary)" id="pageIndicator">Page 1 of 1</span>
+        <button class="btn btn-secondary btn-sm" id="btnNextPage" disabled>Next →</button>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/notifications.js"></script>
+</body>
+</html>

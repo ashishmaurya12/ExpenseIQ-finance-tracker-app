@@ -11,7 +11,7 @@ if (!process.env.JWT_SECRET) {
 module.exports = {
   PORT: process.env.PORT || 3000,
   JWT_SECRET: process.env.JWT_SECRET,
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1h',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/expenseiq',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
 

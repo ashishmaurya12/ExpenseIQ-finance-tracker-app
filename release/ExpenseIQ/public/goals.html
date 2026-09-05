@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Savings Goals — Set savings targets, track your progress, and reach your financial goals.">
+  <title>Savings Goals — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Savings Goals</h1>
+          <p class="subtitle">Set targets and track your progress</p>
+        </div>
+        <button class="btn btn-primary" id="btnAddGoal">
+          + New Goal
+        </button>
+      </div>
+
+      <!-- Goals Summary -->
+      <div class="summary-cards" id="goalsSummary" style="margin-bottom:32px">
+        <div class="summary-card income">
+          <div class="card-icon">🏆</div>
+          <div class="card-label">Active Goals</div>
+          <div class="card-value" id="activeGoals">0</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="card-icon">💰</div>
+          <div class="card-label">Total Saved</div>
+          <div class="card-value" id="totalSaved">₹0</div>
+        </div>
+        <div class="summary-card savings">
+          <div class="card-icon">🎯</div>
+          <div class="card-label">Total Target</div>
+          <div class="card-value" id="totalTarget">₹0</div>
+        </div>
+      </div>
+
+      <!-- Goals Progress Chart -->
+      <div class="chart-card mb-lg hidden" id="goalsChartCard" style="margin-bottom:32px">
+        <h3 style="margin-bottom:16px">🎯 Savings Goal Progress (Saved vs Target)</h3>
+        <div class="chart-container" style="height:260px">
+          <canvas id="goalsProgressChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Goals Grid -->
+      <div class="goals-grid" id="goalsGrid">
+        <div class="text-center text-muted" style="padding:48px;grid-column:1/-1">
+          Loading goals...
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add/Edit Goal Modal -->
+  <div class="modal-overlay" id="goalModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="goalModalTitle">New Savings Goal</h2>
+        <button class="modal-close" id="goalModalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="goalForm" novalidate>
+          <input type="hidden" id="goalId">
+
+          <div class="form-group">
+            <label for="goalName">Goal Name</label>
+            <input type="text" id="goalName" class="form-control" placeholder="e.g. Emergency Fund, New Laptop, Vacation" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="goalTarget">Target Amount (₹)</label>
+              <input type="number" id="goalTarget" class="form-control" placeholder="100000" min="1" required>
+            </div>
+            <div class="form-group">
+              <label for="goalSaved">Already Saved (₹)</label>
+              <input type="number" id="goalSaved" class="form-control" placeholder="0" min="0" value="0">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="goalDeadline">Target Date (optional)</label>
+              <input type="date" id="goalDeadline" class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="goalIcon">Icon</label>
+              <select id="goalIcon" class="form-control">
+                <option value="🎯">🎯 Target</option>
+                <option value="🏠">🏠 Home</option>
+                <option value="🚗">🚗 Car</option>
+                <option value="✈️">✈️ Travel</option>
+                <option value="💻">💻 Tech</option>
+                <option value="📚">📚 Education</option>
+                <option value="💍">💍 Wedding</option>
+                <option value="🏥">🏥 Health</option>
+                <option value="🛡️">🛡️ Emergency</option>
+                <option value="🎮">🎮 Gaming</option>
+                <option value="👶">👶 Baby</option>
+                <option value="📱">📱 Phone</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="goalError" class="form-error" style="display:none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelGoal">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveGoal">Create Goal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fund Goal Modal -->
+  <div class="modal-overlay" id="fundModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add Funds</h2>
+        <button class="modal-close" id="fundModalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-md" id="fundGoalName"></p>
+        <div class="form-group">
+          <label for="fundAmount">Amount to Add (₹)</label>
+          <input type="number" id="fundAmount" class="form-control" placeholder="1000" min="1" required>
+        </div>
+        <input type="hidden" id="fundGoalId">
+        <div id="fundError" class="form-error" style="display:none"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelFund">Cancel</button>
+        <button class="btn btn-primary" id="btnConfirmFund">💰 Add Funds</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/aiAssistant.js"></script>
+  <script src="/js/goals.js"></script>
+</body>
+
+</html>

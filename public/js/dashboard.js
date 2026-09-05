@@ -672,6 +672,11 @@ function renderAIHealthWidget(data) {
           <span style="font-weight:700;color:var(--color-expense)">${formatCurrency(a.amount)} (${a.ratio}x avg)</span>
         </div>
       `).join('');
+    } else {
+      anomalyBox.classList.add('hidden');
+    }
+  }
+
   // Bind Generate AI Insights button
   const btnAiInsights = document.getElementById('btnGenerateAiInsights');
   if (btnAiInsights) {

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ExpenseIQ Dashboard — View your financial summary, spending charts, and recent transactions at a glance.">
+  <title>Dashboard — ExpenseIQ</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar injected by JS -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="subtitle" id="greetingText">Your financial overview</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label for="dashboardMonthSelect" style="font-size:0.85rem;font-weight:600;color:var(--text-secondary)">📅 Filter Month:</label>
+          <select id="dashboardMonthSelect" class="form-control" style="min-width:190px;font-weight:600">
+            <option value="all">All Time / Combined</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="summary-cards" id="summaryCards">
+        <div class="summary-card income">
+          <div class="card-icon">📈</div>
+          <div class="card-label">Total Income</div>
+          <div class="card-value" id="totalIncome">₹0</div>
+        </div>
+        <div class="summary-card expense">
+          <div class="card-icon">📉</div>
+          <div class="card-label">Total Expenses</div>
+          <div class="card-value" id="totalExpense">₹0</div>
+        </div>
+        <div class="summary-card balance">
+          <div class="card-icon">💎</div>
+          <div class="card-label">Balance</div>
+          <div class="card-value" id="totalBalance">₹0</div>
+        </div>
+        <div class="summary-card savings">
+          <div class="card-icon">🎯</div>
+          <div class="card-label">Savings Rate</div>
+          <div class="card-value" id="savingsRate">0%</div>
+        </div>
+      </div>
+
+
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Spending by Category</h3>
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="pieEmpty">
+            <div class="empty-icon">🥧</div>
+            <p>No expense data yet. Add transactions to see your spending breakdown.</p>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Income vs Expenses (Monthly)</h3>
+          <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="barEmpty">
+            <div class="empty-icon">📊</div>
+            <p>No monthly data yet. Add transactions over time to see trends.</p>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Daily Spending Trend (Last 30 Days)</h3>
+          <div class="chart-container">
+            <canvas id="dailyTrendChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="dailyEmpty">
+            <div class="empty-icon">📈</div>
+            <p>No daily spending in the last 30 days.</p>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h3>Income Sources Breakdown</h3>
+          <div class="chart-container">
+            <canvas id="incomeBreakdownChart"></canvas>
+          </div>
+          <div class="empty-state hidden" id="incomeEmpty">
+            <div class="empty-icon">💵</div>
+            <p>No income transactions logged yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Financial Insights & Health Score Widget -->
+      <div class="health-widget hidden" id="healthWidget">
+        <div class="health-widget-header">
+          <div class="health-widget-title">
+            <span style="font-size:1.4rem">✨</span>
+            <div>
+              <h3>AI Financial Insights & Health Score</h3>
+              <p class="subtitle" style="margin:0;font-size:0.78rem">Automated analysis of spending habits & budget health</p>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btnGenerateAiInsights" style="font-size:0.78rem">
+            🤖 Generate AI Insights
+          </button>
+        </div>
+
+
+        <div class="health-widget-body">
+          <div class="health-score-card">
+            <div class="score-circle" id="scoreCircle" style="border: 4px solid var(--accent-primary)">
+              <span class="score-value" id="healthScoreValue">0</span>
+              <span class="score-max">OUT OF 100</span>
+            </div>
+            <div class="score-rating" id="scoreRating">
+              <span id="scoreBadge">🌟</span>
+              <span id="scoreLevel">Calculating...</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div id="aiInsightsList"></div>
+            <div class="anomaly-alert-box hidden" id="anomalyAlertBox">
+              <div style="font-weight:600;color:var(--color-expense);font-size:0.82rem;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+                <span>⚡</span> Anomaly Alerts Detected (>2.0x Category Avg):
+              </div>
+              <div id="anomalyList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 4A Compact Dashboard Intelligence Widgets -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:20px;margin-bottom:32px">
+        <!-- Upcoming Bills Widget -->
+        <div class="card" style="padding:20px">
+          <div class="flex-between mb-sm">
+            <h3 style="font-size:1rem;margin:0">⏰ Upcoming Dues</h3>
+            <a href="/reminders.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+          </div>
+          <div id="dashUpcomingBillsList" style="display:flex;flex-direction:column;gap:10px">
+            <div class="text-muted" style="font-size:0.85rem">Loading upcoming dues...</div>
+          </div>
+        </div>
+
+        <!-- Recent Notifications Widget -->
+        <div class="card" style="padding:20px">
+          <div class="flex-between mb-sm">
+            <h3 style="font-size:1rem;margin:0">🔔 Notifications</h3>
+            <a href="/notifications.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+          </div>
+          <div id="dashRecentNotificationsList" style="display:flex;flex-direction:column;gap:10px">
+            <div class="text-muted" style="font-size:0.85rem">Loading notifications...</div>
+          </div>
+        </div>
+
+        <!-- Recurring Payments Widget -->
+        <div class="card" style="padding:20px">
+          <div class="flex-between mb-sm">
+            <h3 style="font-size:1rem;margin:0">🔄 Recurring Schedules</h3>
+            <a href="/recurring.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+          </div>
+          <div id="dashRecurringList" style="display:flex;flex-direction:column;gap:10px">
+            <div class="text-muted" style="font-size:0.85rem">Loading recurring payments...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="recent-transactions">
+        <div class="flex-between mb-md">
+          <h3>Recent Transactions</h3>
+          <a href="/transactions.html" class="btn btn-ghost" style="font-size:0.8rem">View All →</a>
+        </div>
+        <div class="table-container">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Note</th>
+                  <th style="text-align:right">Amount</th>
+                  <th style="text-align:center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recentTransactions">
+                <tr>
+                  <td colspan="6" class="text-center text-muted" style="padding:32px">
+                    Loading...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Edit / Add Transaction Modal -->
+  <div class="modal-overlay" id="transactionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Edit Transaction</h2>
+        <button class="modal-close" id="modalClose">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="transactionForm" novalidate>
+          <input type="hidden" id="txnId">
+
+          <!-- Type Toggle -->
+          <div class="form-group">
+            <label>Type</label>
+            <div class="type-toggle">
+              <input type="radio" name="txnType" id="typeExpense" value="expense" checked>
+              <label for="typeExpense">💸 Expense</label>
+              <input type="radio" name="txnType" id="typeIncome" value="income">
+              <label for="typeIncome">💰 Income</label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="txnAmount">Amount</label>
+              <input type="number" id="txnAmount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="txnDate">Date</label>
+              <input type="date" id="txnDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="txnCategory">Category</label>
+            <select id="txnCategory" class="form-control" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="txnNote">Note (optional)</label>
+            <input type="text" id="txnNote" class="form-control" placeholder="e.g. Monthly Salary">
+          </div>
+
+          <div id="txnError" class="form-error" style="display:none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelTxn">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveTxn">Save Transaction</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/sidebar.js"></script>
+  <script src="/js/aiAssistant.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+
+</html>
