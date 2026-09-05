@@ -4,7 +4,7 @@ ExpenseIQ is a full-stack personal finance management application built with Nod
 
 ---
 
-## 🌟 Key Features Overview
+## Key Features Overview
 
 ### Phase 4B: Advanced Financial Intelligence & Analytics
 1. **Financial Health Score 2.0 (`/api/financial-health`)**
@@ -40,7 +40,7 @@ ExpenseIQ is a full-stack personal finance management application built with Nod
 
 ---
 
-## 🔒 Security Model & Storage Architecture
+## Security Model & Storage Architecture
 
 ### Database Storage & Development Fallback
 - **MongoDB**: Used as primary database storage when configured and connected (`MONGODB_URI`).
@@ -55,7 +55,7 @@ ExpenseIQ is a full-stack personal finance management application built with Nod
 
 ---
 
-## 🛠️ Environment Variables & Installation
+## Environment Variables & Installation
 
 Copy `.env.example` to create your local `.env` configuration:
 
@@ -87,7 +87,7 @@ Server will start on `http://localhost:3000`.
 
 ---
 
-## 🧪 Testing Instructions
+## Testing Instructions
 
 Run the full automated deterministic test suite:
 
@@ -114,6 +114,6 @@ All 15 test suites execute deterministically using isolated storage environments
 
 ---
 
-## 📌 Limitations
+## Limitations
 - **Cash-Flow Forecasting**: Uses deterministic weighted moving averages and active recurring transactions. It does not employ complex neural network or machine learning models.
 - **AI Provider Dependency**: OpenAI API calls require a valid `OPENAI_API_KEY`. When offline or unavailable, ExpenseIQ falls back gracefully to structured deterministic reports and HTTP 503 provider responses.
